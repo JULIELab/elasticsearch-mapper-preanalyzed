@@ -1,21 +1,13 @@
 package org.elasticsearch.index.mapper.preanalyzed;
 
-import static org.elasticsearch.index.mapper.MapperBuilders.stringField;
 import static org.elasticsearch.index.mapper.core.TypeParsers.parsePathType;
 
 import java.io.IOException;
 import java.util.Map;
 
 import org.apache.lucene.util.BytesRef;
-import org.elasticsearch.common.jackson.core.JsonFactory;
-import org.elasticsearch.common.jackson.core.JsonParser;
-import org.elasticsearch.common.jackson.core.json.ReaderBasedJsonParser;
-import org.elasticsearch.common.jackson.dataformat.smile.SmileFactory;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.common.xcontent.XContentParser.Token;
-import org.elasticsearch.common.xcontent.json.JsonXContentParser;
 import org.elasticsearch.index.mapper.ContentPath;
 import org.elasticsearch.index.mapper.ContentPath.Type;
 import org.elasticsearch.index.mapper.FieldMapperListener;
@@ -25,7 +17,6 @@ import org.elasticsearch.index.mapper.MergeContext;
 import org.elasticsearch.index.mapper.MergeMappingException;
 import org.elasticsearch.index.mapper.ObjectMapperListener;
 import org.elasticsearch.index.mapper.ParseContext;
-import org.elasticsearch.index.mapper.core.StringFieldMapper;
 import org.elasticsearch.index.plugin.mapper.preanalyzed.PreAnalyzedFieldMapper;
 
 public class PreAnalyzedMapper implements Mapper {
@@ -38,12 +29,11 @@ public class PreAnalyzedMapper implements Mapper {
 
 	// This builder builds the whole mapper. Especially, it builds the field
 	// mappers which will parse the actual sent documents.
-	public static class Builder extends
-			Mapper.Builder<Builder, PreAnalyzedMapper> {
+	public static class Builder extends Mapper.Builder<Builder, PreAnalyzedMapper> {
 
 		private ContentPath.Type pathType = Defaults.PATH_TYPE;
 
-		private PreAnalyzedFieldMapper.Builder contentBuilder;
+		private Mapper.Builder<Builder, PreAnalyzedMapper> contentBuilder;
 
 		public Builder(String name) {
 			super(name);
@@ -55,7 +45,7 @@ public class PreAnalyzedMapper implements Mapper {
 			return this;
 		}
 
-		public Builder content(PreAnalyzedFieldMapper.Builder builder) {
+		public Builder content(Mapper.Builder<Builder, PreAnalyzedMapper> builder) {
 			this.contentBuilder = builder;
 			return this;
 		}
@@ -66,8 +56,7 @@ public class PreAnalyzedMapper implements Mapper {
 			// context.path().pathType(pathType);
 
 			// create the content mapper under the actual name
-			PreAnalyzedFieldMapper contentMapper = contentBuilder
-					.build(context);
+			Mapper contentMapper = contentBuilder.build(context);
 
 			// create the DC one under the name
 			// context.path().add(name);
@@ -106,10 +95,9 @@ public class PreAnalyzedMapper implements Mapper {
 		// etc.), it has nothing to do with an actual
 		// sent document.
 		@SuppressWarnings({ "unchecked" })
-		public Mapper.Builder parse(String name, Map<String, Object> node,
+		public Mapper.Builder<Builder, PreAnalyzedMapper> parse(String name, Map<String, Object> node,
 				ParserContext parserContext) throws MapperParsingException {
-			PreAnalyzedMapper.Builder builder = new PreAnalyzedMapper.Builder(
-					name);
+			PreAnalyzedMapper.Builder builder = new PreAnalyzedMapper.Builder(name);
 			boolean textFieldConfigured = false;
 			for (Map.Entry<String, Object> entry : node.entrySet()) {
 				String fieldName = entry.getKey();
@@ -118,16 +106,13 @@ public class PreAnalyzedMapper implements Mapper {
 					builder.pathType(parsePathType(name, fieldNode.toString()));
 				} else if (fieldName.equals("fields")) {
 					Map<String, Object> fieldsNode = (Map<String, Object>) fieldNode;
-					for (Map.Entry<String, Object> entry1 : fieldsNode
-							.entrySet()) {
+					for (Map.Entry<String, Object> entry1 : fieldsNode.entrySet()) {
 						String propName = entry1.getKey();
 						Object propNode = entry1.getValue();
 						if (name.equals(propName)) {
 							// that is the content
-							builder.content((PreAnalyzedFieldMapper.Builder) parserContext
-									.typeParser("tokenstream_json").parse(name,
-											(Map<String, Object>) propNode,
-											parserContext));
+							builder.content((Mapper.Builder<Builder, PreAnalyzedMapper>) parserContext.typeParser(
+									"tokenstream_json").parse(name, (Map<String, Object>) propNode, parserContext));
 							textFieldConfigured = true;
 						}
 					}
@@ -139,6 +124,7 @@ public class PreAnalyzedMapper implements Mapper {
 						"Configuration not complete, field type definition missing (only string is currently supported).");
 
 			return builder;
+
 		}
 	}
 
@@ -146,18 +132,16 @@ public class PreAnalyzedMapper implements Mapper {
 
 	private final ContentPath.Type pathType;
 
-	private final PreAnalyzedFieldMapper contentMapper;
+	private final Mapper contentMapper;
 
-	public PreAnalyzedMapper(String name, Type pathType,
-			PreAnalyzedFieldMapper contentMapper) {
+	public PreAnalyzedMapper(String name, Type pathType, Mapper contentMapper) {
 		this.name = name;
 		this.pathType = pathType;
 		this.contentMapper = contentMapper;
 
 	}
 
-	public XContentBuilder toXContent(XContentBuilder builder, Params params)
-			throws IOException {
+	public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
 		builder.startObject(name);
 		builder.field("type", CONTENT_TYPE);
 		builder.field("path", pathType.name().toLowerCase());
@@ -191,8 +175,7 @@ public class PreAnalyzedMapper implements Mapper {
 		contentMapper.parse(context);
 	}
 
-	public void merge(Mapper mergeWith, MergeContext mergeContext)
-			throws MergeMappingException {
+	public void merge(Mapper mergeWith, MergeContext mergeContext) throws MergeMappingException {
 		// ignore this for now
 	}
 
