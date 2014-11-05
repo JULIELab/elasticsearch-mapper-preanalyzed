@@ -107,7 +107,7 @@ public class PreAnalyzedFieldMapper extends AbstractFieldMapper<String> implemen
 	private FieldType fieldTypeText;
 	private FieldType fieldTypeTokenStream;
 
-	protected PreAnalyzedFieldMapper(Names names, float boost, FieldType fieldType, boolean docValues,
+	protected PreAnalyzedFieldMapper(Names names, Float boost, FieldType fieldType, Boolean docValues,
 			NamedAnalyzer indexAnalyzer, NamedAnalyzer searchAnalyzer, PostingsFormatProvider postingsFormat,
 			DocValuesFormatProvider docValuesFormat, SimilarityProvider similarity, Loading normsLoading,
 			@Nullable Settings fieldDataSettings, Settings indexSettings) {
