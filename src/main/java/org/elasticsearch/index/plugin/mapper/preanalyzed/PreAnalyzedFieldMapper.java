@@ -22,7 +22,6 @@ package org.elasticsearch.index.plugin.mapper.preanalyzed;
 import static org.elasticsearch.index.mapper.core.TypeParsers.parseField;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -55,7 +54,6 @@ import org.elasticsearch.index.mapper.ParseContext;
 import org.elasticsearch.index.mapper.core.AbstractFieldMapper;
 import org.elasticsearch.index.mapper.internal.AllFieldMapper;
 import org.elasticsearch.index.similarity.SimilarityProvider;
-import org.junit.internal.ArrayComparisonFailure;
 
 /**
  *
@@ -188,7 +186,7 @@ public class PreAnalyzedFieldMapper extends AbstractFieldMapper<String> implemen
 			// the
 			// pre-analyzed data.
 			if (token == XContentParser.Token.VALUE_STRING) {
-				value = parser.bytes();
+				value = parser.utf8Bytes();
 			}
 		}
 
@@ -354,7 +352,7 @@ public class PreAnalyzedFieldMapper extends AbstractFieldMapper<String> implemen
 							// byte[] referenced by the input is longer than the actual information, just containing
 							// zeros, which can cause problems with Base64 encoding. All we do is trim the byte array to
 							// its actual length.
-							BytesRef inputBytes = parser.bytes();
+							BytesRef inputBytes = parser.utf8Bytes();
 							byte[] byteArray = new byte[inputBytes.length];
 							System.arraycopy(inputBytes.bytes, 0, byteArray, 0, inputBytes.length);
 							BytesRef bytesRef = new BytesRef(byteArray);

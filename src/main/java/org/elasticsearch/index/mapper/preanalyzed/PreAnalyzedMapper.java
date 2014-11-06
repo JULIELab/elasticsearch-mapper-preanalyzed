@@ -17,7 +17,6 @@ import org.elasticsearch.index.mapper.MergeContext;
 import org.elasticsearch.index.mapper.MergeMappingException;
 import org.elasticsearch.index.mapper.ObjectMapperListener;
 import org.elasticsearch.index.mapper.ParseContext;
-import org.elasticsearch.index.plugin.mapper.preanalyzed.PreAnalyzedFieldMapper;
 
 public class PreAnalyzedMapper implements Mapper {
 
@@ -160,6 +159,7 @@ public class PreAnalyzedMapper implements Mapper {
 	}
 
 	// This method parses an actual document.
+	@Override
 	public void parse(ParseContext context) throws IOException {
 		BytesRef preAnalyzedData = null;
 
@@ -168,11 +168,11 @@ public class PreAnalyzedMapper implements Mapper {
 		// We expect a string value encoding a JSON object which contains the
 		// pre-analyzed data.
 		if (token == XContentParser.Token.VALUE_STRING) {
-			preAnalyzedData = parser.bytes();
+			preAnalyzedData = parser.utf8Bytes();
 		}
-
-		context.externalValue(preAnalyzedData);
-		contentMapper.parse(context);
+		ParseContext externalValueContext = context.createExternalValueContext(preAnalyzedData);
+//		context.externalValue(preAnalyzedData);
+		contentMapper.parse(externalValueContext);
 	}
 
 	public void merge(Mapper mergeWith, MergeContext mergeContext) throws MergeMappingException {
