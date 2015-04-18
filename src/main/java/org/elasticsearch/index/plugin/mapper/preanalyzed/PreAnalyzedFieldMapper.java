@@ -256,7 +256,7 @@ public class PreAnalyzedFieldMapper extends AbstractFieldMapper<String> implemen
 						storedValue.type = PreAnalyzedStoredValue.VALUE_TYPE.STRING;
 					} else if ("bin".equals(currentFieldName)) {
 						storedValue.value = parser.binaryValue();
-						storedValue.type = PreAnalyzedStoredValue.VALUE_TYPE.STRING;
+						storedValue.type = PreAnalyzedStoredValue.VALUE_TYPE.BINARY;
 					}
 				}
 			}
