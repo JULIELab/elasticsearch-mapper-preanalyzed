@@ -1,5 +1,7 @@
 package org.elasticsearch.index.plugin.mapper.preanalyzed;
 
+import static org.elasticsearch.common.io.Streams.copyToBytesFromClasspath;
+import static org.elasticsearch.common.io.Streams.copyToStringFromClasspath;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -13,15 +15,45 @@ import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 import org.elasticsearch.common.Base64;
+import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.io.stream.BytesStreamInput;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.index.mapper.DocumentMapper;
+import org.elasticsearch.index.mapper.DocumentMapperParser;
+import org.elasticsearch.index.mapper.ParseContext;
+import org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper;
 import org.elasticsearch.index.plugin.mapper.preanalyzed.PreAnalyzedFieldMapper.PreAnalyzedTokenStream;
+import org.junit.Before;
 import org.junit.Test;
 
-public class PreAnalyzedFieldMapperTest {
+public class PreAnalyzedFieldMapperTest  {
+
+	private DocumentMapperParser mapperParser;
+
+	@Before
+	public void setupMapperParser() {
+		mapperParser = MapperTestUtils.newMapperParser();
+		// register the preanalyzed mapper among the available mappers
+		mapperParser.putTypeParser(PreAnalyzedMapper.CONTENT_TYPE, new PreAnalyzedMapper.TypeParser());
+	}
+	
+	@SuppressWarnings("resource")
+	@Test
+	public void testSimple() throws Exception {
+		String mapping = copyToStringFromClasspath("/simpleMapping.json");
+		DocumentMapper docMapper = mapperParser.parse(mapping);
+		byte[] docBytes = copyToBytesFromClasspath("/preanalyzedDoc.json");
+		BytesStreamInput input = new BytesStreamInput(docBytes, false);
+		BytesReference bytesRef = input.readBytesReference(docBytes.length);
+		ParseContext.Document doc = docMapper.parse(bytesRef).rootDoc();
+		System.out.println(doc.getField("year"));
+	}
+
 	@Test
 	public void testPreAnalyzedTokenStream() throws IOException {
-		XContentBuilder tsBuilder = jsonBuilder().startObject().field("v", "1")
-				.field("str", "This string should be stored.").startArray("tokens");
+		XContentBuilder tsBuilder =
+				jsonBuilder().startObject().field("v", "1").field("str", "This string should be stored.")
+						.startArray("tokens");
 		tsBuilder.startObject().field("t", "testterm1").field("s", 1).field("e", 8).endObject();
 		tsBuilder.startObject().field("t", "testterm2").field("s", 1).field("e", 8).field("i", 0).endObject();
 		tsBuilder.startObject().field("t", "testterm3").field("s", 9).field("e", 15).endObject();
@@ -29,8 +61,8 @@ public class PreAnalyzedFieldMapperTest {
 				.field("y", "testtype").field("f", "0x4").endObject();
 		tsBuilder.endArray().endObject();
 
-		try (PreAnalyzedTokenStream ts = new PreAnalyzedFieldMapper.PreAnalyzedTokenStream(tsBuilder.bytes()
-				.toBytesRef())) {
+		try (PreAnalyzedTokenStream ts =
+				new PreAnalyzedFieldMapper.PreAnalyzedTokenStream(tsBuilder.bytes().toBytesRef())) {
 
 			CharTermAttribute termAtt = ts.addAttribute(CharTermAttribute.class);
 			OffsetAttribute offsetAtt = ts.addAttribute(OffsetAttribute.class);

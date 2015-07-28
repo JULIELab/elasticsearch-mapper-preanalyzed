@@ -1,0 +1,9 @@
+{
+    "document":{
+        "properties":{
+            "title":{
+                "type":"preanalyzed"
+            }
+        }
+    }
+}
