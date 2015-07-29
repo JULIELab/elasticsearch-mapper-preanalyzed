@@ -7,6 +7,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 
+import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.FlagsAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
@@ -48,6 +49,14 @@ public class PreAnalyzedFieldMapperTest {
 		BytesStreamInput input = new BytesStreamInput(docBytes, false);
 		BytesReference bytesRef = input.readBytesReference(docBytes.length);
 		ParseContext.Document doc = docMapper.parse(bytesRef).rootDoc();
+		
+		// Check field: "author"
+		IndexableField field = doc.getField("author");
+		assertNotNull(field);
+		assertEquals("Anna Sewell", field.stringValue());
+		
+		// Check field: "title"
+		
 		IndexableField[] fields = doc.getFields("title");
 		// "title" is a preanalyzed field that is also stored (see mapping). We have to create two fields: one with the
 		// pre-analyzed token stream and one with the stored value.
@@ -58,6 +67,76 @@ public class PreAnalyzedFieldMapperTest {
 		assertTrue(fieldType.storeTermVectorOffsets());
 		assertTrue(fieldType.storeTermVectorPositions());
 		assertFalse(fieldType.stored());
+		// check the token stream
+		TokenStream ts = fields[0].tokenStream(null, null);
+		CharTermAttribute termAtt = ts.addAttribute(CharTermAttribute.class);
+		OffsetAttribute offsetAtt = ts.addAttribute(OffsetAttribute.class);
+		PositionIncrementAttribute posIncrAtt = ts.addAttribute(PositionIncrementAttribute.class);
+		assertTrue(ts.incrementToken());
+		assertEquals("Black", termAtt.toString());
+		assertEquals(0, offsetAtt.startOffset());
+		assertEquals(5, offsetAtt.endOffset());
+		assertEquals(1, posIncrAtt.getPositionIncrement());
+
+		assertTrue(ts.incrementToken());
+		assertEquals("hero", termAtt.toString());
+		assertEquals(0, offsetAtt.startOffset());
+		assertEquals(12, offsetAtt.endOffset());
+		assertEquals(0, posIncrAtt.getPositionIncrement());
+
+		assertTrue(ts.incrementToken());
+		assertEquals("Beauty", termAtt.toString());
+		assertEquals(6, offsetAtt.startOffset());
+		assertEquals(12, offsetAtt.endOffset());
+		assertEquals(1, posIncrAtt.getPositionIncrement());
+
+		assertTrue(ts.incrementToken());
+		assertEquals("ran", termAtt.toString());
+		assertEquals(13, offsetAtt.startOffset());
+		assertEquals(16, offsetAtt.endOffset());
+		assertEquals(1, posIncrAtt.getPositionIncrement());
+
+		assertTrue(ts.incrementToken());
+		assertEquals("past", termAtt.toString());
+		assertEquals(17, offsetAtt.startOffset());
+		assertEquals(21, offsetAtt.endOffset());
+		assertEquals(1, posIncrAtt.getPositionIncrement());
+
+		assertTrue(ts.incrementToken());
+		assertEquals("the", termAtt.toString());
+		assertEquals(22, offsetAtt.startOffset());
+		assertEquals(25, offsetAtt.endOffset());
+		assertEquals(1, posIncrAtt.getPositionIncrement());
+
+		assertTrue(ts.incrementToken());
+		assertEquals("bloody", termAtt.toString());
+		assertEquals(26, offsetAtt.startOffset());
+		assertEquals(32, offsetAtt.endOffset());
+		assertEquals(1, posIncrAtt.getPositionIncrement());
+
+		assertTrue(ts.incrementToken());
+		assertEquals("NP", termAtt.toString());
+		assertEquals(26, offsetAtt.startOffset());
+		assertEquals(37, offsetAtt.endOffset());
+		assertEquals(0, posIncrAtt.getPositionIncrement());
+
+		assertTrue(ts.incrementToken());
+		assertEquals("NNP", termAtt.toString());
+		assertEquals(26, offsetAtt.startOffset());
+		assertEquals(37, offsetAtt.endOffset());
+		assertEquals(0, posIncrAtt.getPositionIncrement());
+
+		assertTrue(ts.incrementToken());
+		assertEquals("barn", termAtt.toString());
+		assertEquals(33, offsetAtt.startOffset());
+		assertEquals(37, offsetAtt.endOffset());
+		assertEquals(1, posIncrAtt.getPositionIncrement());
+
+		assertTrue(ts.incrementToken());
+		assertEquals(".", termAtt.toString());
+		assertEquals(37, offsetAtt.startOffset());
+		assertEquals(38, offsetAtt.endOffset());
+		assertEquals(1, posIncrAtt.getPositionIncrement());
 
 		fieldType = fields[1].fieldType();
 		assertFalse(fieldType.indexed());
@@ -66,6 +145,12 @@ public class PreAnalyzedFieldMapperTest {
 		assertFalse(fieldType.storeTermVectorPositions());
 		assertTrue(fieldType.stored());
 		assertEquals("Black Beauty ran past the bloody barn.", fields[1].stringValue());
+		
+		// End field "title"
+		
+		IndexableField yearField = doc.getField("year");
+		assertNotNull(yearField);
+		assertEquals(1877L, yearField.numericValue());
 	}
 
 	@Test
