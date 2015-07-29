@@ -36,6 +36,21 @@
 	</build>
 
 	<dependencies>
+		<!-- Also required for ElasticSearchTestCase -->
+		 <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-all</artifactId>
+        </dependency>
+		<dependency>
+			<groupId>com.carrotsearch.randomizedtesting</groupId>
+			<artifactId>randomizedtesting-runner</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Required to use ElasticSearchTestCase base class -->
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-test-framework</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.elasticsearch</groupId>
 			<artifactId>elasticsearch</artifactId>
@@ -45,11 +60,6 @@
 			<artifactId>elasticsearch</artifactId>
 			<type>test-jar</type>
 		</dependency>
-		  <dependency>
-            <groupId>com.carrotsearch.randomizedtesting</groupId>
-            <artifactId>randomizedtesting-runner</artifactId>
-            <scope>test</scope>
-        </dependency>
 
 	</dependencies>
 	<parent>

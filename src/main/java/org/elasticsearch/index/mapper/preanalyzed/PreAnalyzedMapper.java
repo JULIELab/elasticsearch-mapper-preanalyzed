@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.FlagsAttribute;
@@ -18,11 +19,13 @@ import org.apache.lucene.document.FieldType;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.ImmutableSettings;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentParser.Token;
 import org.elasticsearch.index.analysis.NamedAnalyzer;
 import org.elasticsearch.index.codec.docvaluesformat.DocValuesFormatProvider;
+import org.elasticsearch.index.codec.postingsformat.PostingsFormatProvider;
 import org.elasticsearch.index.fielddata.FieldDataType;
 import org.elasticsearch.index.mapper.ContentPath;
 import org.elasticsearch.index.mapper.FieldMapperListener;
@@ -34,16 +37,13 @@ import org.elasticsearch.index.mapper.ObjectMapperListener;
 import org.elasticsearch.index.mapper.ParseContext;
 import org.elasticsearch.index.mapper.core.AbstractFieldMapper;
 import org.elasticsearch.index.mapper.internal.AllFieldMapper;
+import org.elasticsearch.index.similarity.SimilarityProvider;
 
 import static org.elasticsearch.index.mapper.core.TypeParsers.parseField;
 
 public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements AllFieldMapper.IncludeInAll {
 
 	public static final String CONTENT_TYPE = "preanalyzed";
-
-	public static class Defaults {
-		public static final ContentPath.Type PATH_TYPE = ContentPath.Type.FULL;
-	}
 
 	// This builder builds the whole mapper. Especially, it builds the field
 	// mappers which will parse the actual sent documents.
@@ -56,8 +56,9 @@ public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements Al
 
 		@Override
 		public PreAnalyzedMapper build(BuilderContext context) {
-			return new PreAnalyzedMapper(buildNames(context), fieldType, docValuesProvider, docValues, searchAnalyzer,
-					multiFieldsBuilder.build(this, context));
+			return new PreAnalyzedMapper(buildNames(context), boost, fieldType, docValuesProvider, docValues,
+					indexAnalyzer, searchAnalyzer, postingsProvider, similarity, normsLoading, fieldDataSettings,
+					context.indexSettings(), multiFieldsBuilder.build(this, context));
 		}
 
 	}
@@ -99,19 +100,34 @@ public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements Al
 	// private final String name;
 
 	private Boolean includeInAll;
+	private FieldType fieldTypeTokenStream;
+	private FieldType fieldTypeText;
 
-	public PreAnalyzedMapper(Names names, FieldType fieldType, DocValuesFormatProvider docValuesProvider,
-			Boolean docValues, NamedAnalyzer searchAnalyzer, MultiFields multiFields) {
-		super(names, 1.0f, AbstractFieldMapper.Defaults.FIELD_TYPE, docValues, null, searchAnalyzer, null,
-				docValuesProvider, null, null, null, ImmutableSettings.EMPTY, multiFields, null);
+	public PreAnalyzedMapper(Names names, float boost, FieldType fieldType, DocValuesFormatProvider docValuesProvider,
+			Boolean docValues, NamedAnalyzer indexAnalyzer, NamedAnalyzer searchAnalyzer,
+			PostingsFormatProvider postingsProvider, SimilarityProvider similarity,
+			org.elasticsearch.index.mapper.FieldMapper.Loading normsLoading, Settings fieldDataSettings,
+			Settings indexSettings, MultiFields multiFields) {
+		super(names, boost, AbstractFieldMapper.Defaults.FIELD_TYPE, docValues, indexAnalyzer, searchAnalyzer,
+				postingsProvider, docValuesProvider, similarity, normsLoading, fieldDataSettings, indexSettings,
+				multiFields, null);
 		this.fieldType = fieldType;
-	}
 
-	public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-		builder.startObject(name());
-		builder.field("type", CONTENT_TYPE);
-		builder.endObject();
-		return builder;
+		fieldTypeTokenStream = new FieldType(fieldType);
+		// TokenStream fields cannot be stored. But the option can be set anyway
+		// because the plain text value should be stored.
+		fieldTypeTokenStream.setStored(false);
+
+		// The text field will be stored but not analyzed, tokenized or anything
+		// except of being stored.
+		fieldTypeText = new FieldType(fieldType);
+		fieldTypeText.setIndexed(false);
+		fieldTypeText.setTokenized(false);
+		fieldTypeText.setStored(true);
+		fieldTypeText.setStoreTermVectors(false);
+		fieldTypeText.setStoreTermVectorPositions(false);
+		fieldTypeText.setStoreTermVectorOffsets(false);
+		fieldTypeText.setStoreTermVectorPayloads(false);
 	}
 
 	@Override
@@ -135,34 +151,22 @@ public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements Al
 		// the same name.
 		// This will give as a stored and analyzed field in the index eventually.
 		if (fieldType().indexed() && fieldType().tokenized()) {
-			FieldType analyzedFieldType = new FieldType(fieldType);
-			// set storing of since it would just throw an error
-			analyzedFieldType.setStored(false);
 			TokenStream ts = valueAndTokenStream.v2();
 			if (null == ts)
 				throw new MapperParsingException("The preanalyzed field \"" + names.fullName()
 						+ "\" is tokenized and indexed, but no preanalyzed TokenStream could be found.");
-			Field field = new Field(names.indexName(), ts, analyzedFieldType);
+			Field field = new Field(names.indexName(), ts, fieldTypeTokenStream);
 			field.setBoost(boost);
 			fields.add(field);
 		}
 
 		PreAnalyzedStoredValue storedValue = valueAndTokenStream.v1();
 		if (fieldType().stored() && null != storedValue.value) {
-			// Switch of indexing and tokenization for the stored value; this sort of thing should be done for the field
-			// responsible for holding the actual preanalyzed TokenStream.
-			FieldType storedFieldType = new FieldType(fieldType);
-			storedFieldType.setTokenized(false);
-			storedFieldType.setIndexed(false);
-			storedFieldType.setStoreTermVectors(false);
-			storedFieldType.setStoreTermVectorOffsets(false);
-			storedFieldType.setStoreTermVectorPositions(false);
-			storedFieldType.setStoreTermVectorPayloads(false);
 			Field field;
 			if (PreAnalyzedStoredValue.VALUE_TYPE.STRING == storedValue.type) {
-				field = new Field(names.indexName(), (String) storedValue.value, storedFieldType);
+				field = new Field(names.indexName(), (String) storedValue.value, fieldTypeText);
 			} else {
-				field = new Field(names.indexName(), (BytesRef) storedValue.value, storedFieldType);
+				field = new Field(names.indexName(), (BytesRef) storedValue.value, fieldTypeText);
 			}
 			fields.add(field);
 		}
@@ -321,7 +325,6 @@ public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements Al
 					throw new IllegalArgumentException(
 							"There is at least one token object in the pre-analyzed field value where no actual term string is specified.");
 				}
-
 				tokenList.add(tokenMap);
 			}
 		}
@@ -455,22 +458,13 @@ public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements Al
 
 	@Override
 	public void merge(Mapper mergeWith, MergeContext mergeContext) throws MergeMappingException {
-		// ignore this for now
-	}
-
-	@Override
-	public void traverse(FieldMapperListener fieldMapperListener) {
-		//
-	}
-
-	@Override
-	public void traverse(ObjectMapperListener objectMapperListener) {
-		//
-	}
-
-	@Override
-	public void close() {
-		//
+		super.merge(mergeWith, mergeContext);
+		if (!this.getClass().equals(mergeWith.getClass())) {
+			return;
+		}
+		if (!mergeContext.mergeFlags().simulate()) {
+			this.includeInAll = ((PreAnalyzedMapper) mergeWith).includeInAll;
+		}
 	}
 
 	@Override
@@ -485,7 +479,10 @@ public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements Al
 
 	@Override
 	public FieldDataType defaultFieldDataType() {
-		return null;
+		// Set the default field data type to string: This way the contents are
+		// interpreted as if the field type would have been "string" which is
+		// important for facets, for instance.
+		return new FieldDataType("string");
 	}
 
 	@Override

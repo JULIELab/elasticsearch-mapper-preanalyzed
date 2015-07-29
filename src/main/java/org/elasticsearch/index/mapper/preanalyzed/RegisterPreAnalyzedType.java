@@ -13,7 +13,7 @@ public class RegisterPreAnalyzedType extends AbstractIndexComponent {
 			@IndexSettings Settings indexSettings, MapperService mapperService) {
 		super(index, indexSettings);
 
-		mapperService.documentMapperParser().putTypeParser("preanalyzed",
+		mapperService.documentMapperParser().putTypeParser(PreAnalyzedMapper.CONTENT_TYPE,
 				new PreAnalyzedMapper.TypeParser());
 	}
 }
