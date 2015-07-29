@@ -1,10 +1,9 @@
-package org.elasticsearch.index.plugin.mapper.preanalyzed;
+package org.elasticsearch.index.mapper.preanalyzed;
 
 import static org.elasticsearch.common.io.Streams.copyToBytesFromClasspath;
 import static org.elasticsearch.common.io.Streams.copyToStringFromClasspath;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 
@@ -14,19 +13,22 @@ import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
+import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.IndexableFieldType;
 import org.elasticsearch.common.Base64;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.BytesStreamInput;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentHelper;
+import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.mapper.DocumentMapper;
 import org.elasticsearch.index.mapper.DocumentMapperParser;
 import org.elasticsearch.index.mapper.ParseContext;
-import org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper;
-import org.elasticsearch.index.plugin.mapper.preanalyzed.PreAnalyzedFieldMapper.PreAnalyzedTokenStream;
+import org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper.PreAnalyzedTokenStream;
 import org.junit.Before;
 import org.junit.Test;
 
-public class PreAnalyzedFieldMapperTest  {
+public class PreAnalyzedFieldMapperTest {
 
 	private DocumentMapperParser mapperParser;
 
@@ -36,7 +38,7 @@ public class PreAnalyzedFieldMapperTest  {
 		// register the preanalyzed mapper among the available mappers
 		mapperParser.putTypeParser(PreAnalyzedMapper.CONTENT_TYPE, new PreAnalyzedMapper.TypeParser());
 	}
-	
+
 	@SuppressWarnings("resource")
 	@Test
 	public void testSimple() throws Exception {
@@ -46,7 +48,24 @@ public class PreAnalyzedFieldMapperTest  {
 		BytesStreamInput input = new BytesStreamInput(docBytes, false);
 		BytesReference bytesRef = input.readBytesReference(docBytes.length);
 		ParseContext.Document doc = docMapper.parse(bytesRef).rootDoc();
-		System.out.println(doc.getField("year"));
+		IndexableField[] fields = doc.getFields("title");
+		// "title" is a preanalyzed field that is also stored (see mapping). We have to create two fields: one with the
+		// pre-analyzed token stream and one with the stored value.
+		assertEquals(2, fields.length);
+		IndexableFieldType fieldType = fields[0].fieldType();
+		assertTrue(fieldType.indexed());
+		assertTrue(fieldType.tokenized());
+		assertTrue(fieldType.storeTermVectorOffsets());
+		assertTrue(fieldType.storeTermVectorPositions());
+		assertFalse(fieldType.stored());
+
+		fieldType = fields[1].fieldType();
+		assertFalse(fieldType.indexed());
+		assertFalse(fieldType.tokenized());
+		assertFalse(fieldType.storeTermVectorOffsets());
+		assertFalse(fieldType.storeTermVectorPositions());
+		assertTrue(fieldType.stored());
+		assertEquals("Black Beauty ran past the bloody barn.", fields[1].stringValue());
 	}
 
 	@Test
@@ -60,9 +79,27 @@ public class PreAnalyzedFieldMapperTest  {
 		tsBuilder.startObject().field("t", "testterm4").field("p", Base64.encodeBytes("my payload".getBytes()))
 				.field("y", "testtype").field("f", "0x4").endObject();
 		tsBuilder.endArray().endObject();
+		XContentParser parser = XContentHelper.createParser(tsBuilder.bytesStream().bytes());
+		parser.nextToken(); // begin object
+		parser.nextToken();
+		assertEquals(XContentParser.Token.FIELD_NAME, parser.currentToken()); // "v"
+		assertEquals("v", parser.currentName());
+		parser.nextToken();
+		assertEquals(XContentParser.Token.VALUE_STRING, parser.currentToken());
+		assertEquals("1", parser.text());
+		parser.nextToken();
+		assertEquals(XContentParser.Token.FIELD_NAME, parser.currentToken()); // "str"
+		assertEquals("str", parser.currentName());
+		parser.nextToken();
+		assertEquals(XContentParser.Token.VALUE_STRING, parser.currentToken());
+		assertEquals("This string should be stored.", parser.text());
+		parser.nextToken();
+		assertEquals(XContentParser.Token.FIELD_NAME, parser.currentToken()); // "tokens"
+		// This is it: We are currently at the token property. Now proceed one more time. Then we are at the exact
+		// position the token stream expects.
+		parser.nextToken();
 
-		try (PreAnalyzedTokenStream ts =
-				new PreAnalyzedFieldMapper.PreAnalyzedTokenStream(tsBuilder.bytes().toBytesRef())) {
+		try (final PreAnalyzedTokenStream ts = new PreAnalyzedMapper.PreAnalyzedTokenStream(parser)) {
 
 			CharTermAttribute termAtt = ts.addAttribute(CharTermAttribute.class);
 			OffsetAttribute offsetAtt = ts.addAttribute(OffsetAttribute.class);

@@ -21,6 +21,8 @@ import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentParser.Token;
+import org.elasticsearch.index.analysis.NamedAnalyzer;
+import org.elasticsearch.index.codec.docvaluesformat.DocValuesFormatProvider;
 import org.elasticsearch.index.fielddata.FieldDataType;
 import org.elasticsearch.index.mapper.ContentPath;
 import org.elasticsearch.index.mapper.FieldMapperListener;
@@ -32,6 +34,8 @@ import org.elasticsearch.index.mapper.ObjectMapperListener;
 import org.elasticsearch.index.mapper.ParseContext;
 import org.elasticsearch.index.mapper.core.AbstractFieldMapper;
 import org.elasticsearch.index.mapper.internal.AllFieldMapper;
+
+import static org.elasticsearch.index.mapper.core.TypeParsers.parseField;
 
 public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements AllFieldMapper.IncludeInAll {
 
@@ -45,21 +49,15 @@ public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements Al
 	// mappers which will parse the actual sent documents.
 	public static class Builder extends AbstractFieldMapper.Builder<Builder, PreAnalyzedMapper> {
 
-		private ContentPath.Type pathType = Defaults.PATH_TYPE;
-
 		public Builder(String name) {
 			super(name, new FieldType(AbstractFieldMapper.Defaults.FIELD_TYPE));
 			this.builder = this;
 		}
 
-		public Builder pathType(ContentPath.Type pathType) {
-			this.pathType = pathType;
-			return this;
-		}
-
 		@Override
 		public PreAnalyzedMapper build(BuilderContext context) {
-			return new PreAnalyzedMapper(buildNames(context), pathType, multiFieldsBuilder.build(this, context), copyTo);
+			return new PreAnalyzedMapper(buildNames(context), fieldType, docValuesProvider, docValues, searchAnalyzer,
+					multiFieldsBuilder.build(this, context));
 		}
 
 	}
@@ -92,65 +90,32 @@ public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements Al
 		public Mapper.Builder<Builder, PreAnalyzedMapper> parse(String name, Map<String, Object> node,
 				ParserContext parserContext) throws MapperParsingException {
 			PreAnalyzedMapper.Builder builder = new PreAnalyzedMapper.Builder(name);
+			parseField(builder, name, node, parserContext);
+
 			return builder;
 		}
 	}
 
 	// private final String name;
 
-	private final ContentPath.Type pathType;
 	private Boolean includeInAll;
 
-	// private PreAnalyzedFieldMapper fieldmapper;
-
-	// public PreAnalyzedMapper(String name, Type pathType, PreAnalyzedFieldMapper fieldmapper) {
-	// this.name = name;
-	// this.pathType = pathType;
-	// this.fieldmapper = fieldmapper;
-	//
-	// }
-
-	public PreAnalyzedMapper(Names names, ContentPath.Type pathType, MultiFields multiFields, CopyTo copyTo) {
-		super(names, 1.0f, AbstractFieldMapper.Defaults.FIELD_TYPE, false, null, null, null, null, null, null, null,
-				ImmutableSettings.EMPTY, multiFields, copyTo);
-		this.pathType = pathType;
+	public PreAnalyzedMapper(Names names, FieldType fieldType, DocValuesFormatProvider docValuesProvider,
+			Boolean docValues, NamedAnalyzer searchAnalyzer, MultiFields multiFields) {
+		super(names, 1.0f, AbstractFieldMapper.Defaults.FIELD_TYPE, docValues, null, searchAnalyzer, null,
+				docValuesProvider, null, null, null, ImmutableSettings.EMPTY, multiFields, null);
+		this.fieldType = fieldType;
 	}
 
 	public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
 		builder.startObject(name());
 		builder.field("type", CONTENT_TYPE);
-		builder.field("path", pathType.name().toLowerCase());
 		builder.endObject();
 		return builder;
 	}
 
 	@Override
 	protected void parseCreateField(ParseContext context, List<Field> fields) throws IOException {
-		// BytesRef value = null;
-		// float boost = this.boost;
-		// if (context.externalValueSet()) {
-		// value = (BytesRef) context.externalValue();
-		// }
-		//
-		// if (null == value) {
-		// // No value given externally. Thus we expect a simple value like
-		// // {"text":"{\"v\":\"1\",\"str\":\"This is a text\",\"tokens\":[...]}"}
-		// // in the original document. We will parse out this string and then
-		// // give
-		// // it to a new parser in the following that will "see" the actual
-		// // JSON
-		// // format. Thus, there should be one value string and we are going
-		// // to
-		// // fetch it now.
-		// XContentParser parser = context.parser();
-		// XContentParser.Token token = parser.currentToken();
-		// // We expect a string value encoding a JSON object which contains
-		// // the
-		// // pre-analyzed data.
-		// if (token == XContentParser.Token.VALUE_STRING) {
-		// value = parser.utf8Bytes();
-		// }
-		// }
 
 		// if (context.includeInAll(includeInAll, this)) {
 		// context.allEntries().addText(names.fullName(), new String(value.bytes), boost);
@@ -163,26 +128,42 @@ public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements Al
 		Tuple<PreAnalyzedStoredValue, TokenStream> valueAndTokenStream =
 				parsePreAnalyzedFieldContents(context.parser());
 
-		if (defaultFieldType().indexed() && defaultFieldType().tokenized()) {
+		// We actually create two fields: First, a TokenStream (cannot be stored!) field for the analyzed part of the
+		// preanalyzed field. That is
+		// done next.
+		// Further below, if the field should also be stored, we also create a new, un-analyzed but stored field with
+		// the same name.
+		// This will give as a stored and analyzed field in the index eventually.
+		if (fieldType().indexed() && fieldType().tokenized()) {
+			FieldType analyzedFieldType = new FieldType(fieldType);
+			// set storing of since it would just throw an error
+			analyzedFieldType.setStored(false);
 			TokenStream ts = valueAndTokenStream.v2();
 			if (null == ts)
 				throw new MapperParsingException("The preanalyzed field \"" + names.fullName()
 						+ "\" is tokenized and indexed, but no preanalyzed TokenStream could be found.");
-			Field field = new Field(names.indexName(), ts, defaultFieldType());
+			Field field = new Field(names.indexName(), ts, analyzedFieldType);
 			field.setBoost(boost);
-			// context.doc().add(field);
 			fields.add(field);
 		}
 
 		PreAnalyzedStoredValue storedValue = valueAndTokenStream.v1();
 		if (fieldType().stored() && null != storedValue.value) {
+			// Switch of indexing and tokenization for the stored value; this sort of thing should be done for the field
+			// responsible for holding the actual preanalyzed TokenStream.
+			FieldType storedFieldType = new FieldType(fieldType);
+			storedFieldType.setTokenized(false);
+			storedFieldType.setIndexed(false);
+			storedFieldType.setStoreTermVectors(false);
+			storedFieldType.setStoreTermVectorOffsets(false);
+			storedFieldType.setStoreTermVectorPositions(false);
+			storedFieldType.setStoreTermVectorPayloads(false);
 			Field field;
 			if (PreAnalyzedStoredValue.VALUE_TYPE.STRING == storedValue.type) {
-				field = new Field(names.indexName(), (String) storedValue.value, fieldType());
+				field = new Field(names.indexName(), (String) storedValue.value, storedFieldType);
 			} else {
-				field = new Field(names.indexName(), (BytesRef) storedValue.value, fieldType());
+				field = new Field(names.indexName(), (BytesRef) storedValue.value, storedFieldType);
 			}
-			// context.doc().add(field);
 			fields.add(field);
 		}
 
@@ -236,7 +217,7 @@ public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements Al
 		}
 	}
 
-	static class PreAnalyzedTokenStream extends TokenStream {
+	public static class PreAnalyzedTokenStream extends TokenStream {
 		private final CharTermAttribute termAtt = addAttribute(CharTermAttribute.class);
 		private final OffsetAttribute offsetAtt = addAttribute(OffsetAttribute.class);
 		private final PositionIncrementAttribute posIncrAtt = addAttribute(PositionIncrementAttribute.class);
@@ -358,8 +339,12 @@ public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements Al
 				Integer end = (Integer) t.get("e");
 				Integer posInc = (Integer) t.get("i");
 
+				// First clear all attributes for the case that some attributes
+				// are sometimes but not always specified.
+				clearAttributes();
+
 				if (null != termChars)
-					termAtt.copyBuffer(termChars, parser.textOffset(), parser.textLength());
+					termAtt.copyBuffer(termChars, 0, termChars.length);
 				if (null != payload)
 					payloadAtt.setPayload(payload);
 				if (null != flags)
@@ -369,8 +354,10 @@ public class PreAnalyzedMapper extends AbstractFieldMapper<Object> implements Al
 				if (null != posInc)
 					posIncrAtt.setPositionIncrement(posInc);
 
-				if (-1 != start && -1 != end)
+				if (null != start && null != end && -1 != start && -1 != end)
 					offsetAtt.setOffset(start, end);
+
+				++tokenIndex;
 
 				// }
 

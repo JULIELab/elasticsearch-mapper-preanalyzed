@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.elasticsearch.index.plugin.mapper.preanalyzed;
+package org.elasticsearch.index.mapper.preanalyzed;
 
 import org.apache.lucene.util.Constants;
 import org.elasticsearch.Version;
