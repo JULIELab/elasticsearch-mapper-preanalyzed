@@ -7,6 +7,7 @@ ElasticSearch compatibility table:
 
 | elasticsearch |  Preanalyzed Mapper Plugin | Docs
 |---------------|----------------------------|------
+| es-1.7		|  0.1.0 | [0.1.0] (https://github.com/khituras/elasticsearch-mapper-preanalyzed/tree/es-1.7)
 | es-1.5        |  0.0.5 | [0.0.5] (https://github.com/khituras/elasticsearch-mapper-preanalyzed/tree/es-1.5)
 | es-1.4        |  0.0.4 | [0.0.4] (https://github.com/khituras/elasticsearch-mapper-preanalyzed/tree/es-1.4)
 

@@ -46,7 +46,7 @@ public class PreAnalyzedFieldMapperTest {
 		String mapping = copyToStringFromClasspath("/simpleMapping.json");
 		DocumentMapper docMapper = mapperParser.parse(mapping);
 		byte[] docBytes = copyToBytesFromClasspath("/preanalyzedDoc.json");
-		BytesStreamInput input = new BytesStreamInput(docBytes, false);
+		BytesStreamInput input = new BytesStreamInput(docBytes);
 		BytesReference bytesRef = input.readBytesReference(docBytes.length);
 		ParseContext.Document doc = docMapper.parse(bytesRef).rootDoc();
 		
