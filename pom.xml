@@ -3,6 +3,12 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>de.julielab</groupId>
 	<artifactId>elasticsearch-mapper-preanalyzed</artifactId>
+	<name>Plugin: Mapper: Preanalyzed</name>
+	<properties>
+		<elasticsearch.plugin.classname>org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin</elasticsearch.plugin.classname>
+		<tests.rest.suite>mapper_preanalyzed</tests.rest.suite>
+		<tests.rest.load_packaged>false</tests.rest.load_packaged>
+	</properties>
 	<build>
 		<plugins>
 			<plugin>
