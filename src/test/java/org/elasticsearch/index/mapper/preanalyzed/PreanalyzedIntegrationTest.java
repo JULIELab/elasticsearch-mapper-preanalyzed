@@ -1,37 +1,42 @@
 package org.elasticsearch.index.mapper.preanalyzed;
 
 import static org.elasticsearch.client.Requests.putMappingRequest;
-import static org.elasticsearch.common.io.Streams.copyToBytesFromClasspath;
-import static org.elasticsearch.common.io.Streams.copyToStringFromClasspath;
-import static org.elasticsearch.index.query.QueryBuilders.*;
+import static org.elasticsearch.index.query.QueryBuilders.matchPhraseQuery;
+import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
+import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 
+import org.apache.commons.io.IOUtils;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.count.CountResponse;
-import org.elasticsearch.common.jackson.core.JsonGenerator;
-import org.elasticsearch.common.jackson.core.json.JsonGeneratorImpl;
-import org.elasticsearch.common.settings.ImmutableSettings;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentBuilderString;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.xcontent.XContentHelper;
-import org.elasticsearch.common.xcontent.json.JsonXContentGenerator;
-import org.elasticsearch.plugins.PluginsService;
-import org.elasticsearch.test.ElasticsearchIntegrationTest;
+import org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.test.ESIntegTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.carrotsearch.ant.tasks.junit4.events.json.JsonByteArrayAdapter;
+@ESIntegTestCase.ClusterScope(scope = ESIntegTestCase.Scope.TEST, numDataNodes = 0)
+public class PreanalyzedIntegrationTest extends ESIntegTestCase {
 
-public class PreanalyzedIntegrationTest extends ElasticsearchIntegrationTest {
-
-	@Override
-	protected Settings nodeSettings(int nodeOrdinal) {
-		return ImmutableSettings.builder().put(super.nodeSettings(nodeOrdinal))
-				.put("plugins." + PluginsService.LOAD_PLUGIN_FROM_CLASSPATH, true).build();
-	}
+//	@Override
+//	protected Settings nodeSettings(int nodeOrdinal) {
+//		
+//		return Settings.builder().put(super.nodeSettings(nodeOrdinal))
+//				.put("plugins." + PluginsService.LOAD_PLUGIN_FROM_CLASSPATH, true).build();
+//	}
+	
+	 @Override
+	    protected Collection<Class<? extends Plugin>> nodePlugins() {
+	        return Collections.<Class<? extends Plugin>>singleton(MapperPreAnalyzedPlugin.class);
+	    }
 
 	@Before
 	public void createEmptyIndex() throws Exception {
@@ -43,8 +48,8 @@ public class PreanalyzedIntegrationTest extends ElasticsearchIntegrationTest {
 	@SuppressWarnings("unchecked")
 	@Test
 	public void testSimpleIndex() throws Exception {
-		String mapping = copyToStringFromClasspath("/simpleMapping.json");
-		byte[] docBytes = copyToBytesFromClasspath("/preanalyzedDoc.json");
+		String mapping = IOUtils.toString(getClass().getResourceAsStream("/simpleMapping.json"), "UTF-8");
+		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
 
 		// Put the preanalyzed mapping check that it is there indeed
 		client().admin().indices().putMapping(putMappingRequest("test").type("document").source(mapping)).actionGet();
@@ -58,7 +63,7 @@ public class PreanalyzedIntegrationTest extends ElasticsearchIntegrationTest {
 		assertEquals("preanalyzed", titleMapping.get("type"));
 		assertEquals(true, titleMapping.get("store"));
 		assertEquals("with_positions_offsets", titleMapping.get("term_vector"));
-		assertEquals("keyword", titleMapping.get("search_analyzer"));
+		assertEquals("keyword", titleMapping.get("analyzer"));
 
 		index("test", "document", "1", XContentHelper.convertToJson(docBytes, 0, docBytes.length, false));
 		refresh();
@@ -99,5 +104,10 @@ public class PreanalyzedIntegrationTest extends ElasticsearchIntegrationTest {
 		countResponse =
 				client().prepareCount("test").setQuery(queryStringQuery("1877").defaultField("year")).execute().get();
 		assertEquals(1l, countResponse.getCount());
+		
+		SearchResponse searchResponse = client().prepareSearch("test").setQuery(matchQuery("title", "Black")).addField("title").execute().actionGet();
+		assertEquals(1, searchResponse.getHits().getTotalHits());
+		SearchHit searchHit = searchResponse.getHits().getHits()[0];
+		assertTrue(((String)searchHit.field("title").value()).startsWith("Black Beauty"));
 	}
 }

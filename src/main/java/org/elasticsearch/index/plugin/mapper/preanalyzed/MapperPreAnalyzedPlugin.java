@@ -1,25 +1,23 @@
 package org.elasticsearch.index.plugin.mapper.preanalyzed;
 
-import java.util.Collection;
+import org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper;
+import org.elasticsearch.indices.IndicesModule;
+import org.elasticsearch.plugins.Plugin;
 
-import org.elasticsearch.common.inject.Module;
-import org.elasticsearch.plugins.AbstractPlugin;
+public class MapperPreAnalyzedPlugin extends Plugin {
 
-import static org.elasticsearch.common.collect.Lists.newArrayList;
-
-public class MapperPreAnalyzedPlugin extends AbstractPlugin {
-
+	@Override
 	public String name() {
 		return "mapper-preanalyzed";
 	}
 
+	@Override
 	public String description() {
 		return "Allows to index pre-analyzed field contents.";
 	}
 
-	public Collection<Class<? extends Module>> indexModules() {
-		Collection<Class<? extends Module>> modules = newArrayList();
-		modules.add(PreAnalyzedIndexModule.class);
-		return modules;
+	public void onModule(IndicesModule indicesModule) {
+		indicesModule.registerMapper("preanalyzed", new PreAnalyzedMapper.TypeParser());
 	}
+
 }
