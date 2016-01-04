@@ -1,8 +1,27 @@
+/*
+ * Licensed to Elasticsearch under one or more contributor
+ * license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright
+ * ownership. Elasticsearch licenses this file to you under
+ * the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package org.elasticsearch.index.mapper.preanalyzed;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,9 +54,8 @@ import org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper.PreAnalyzedT
 import org.elasticsearch.indices.mapper.MapperRegistry;
 import org.elasticsearch.test.ESSingleNodeTestCase;
 import org.junit.Before;
-import org.junit.Test;
 
-public class PreAnalyzedFieldMapperTest extends ESSingleNodeTestCase {
+public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 
 	MapperRegistry mapperRegistry;
 	IndexService indexService;
@@ -56,7 +74,6 @@ public class PreAnalyzedFieldMapperTest extends ESSingleNodeTestCase {
 				mapperRegistry);
 	}
 
-	@Test
 	public void testSimple() throws Exception {
 		String mapping = IOUtils.toString(getClass().getResourceAsStream("/simpleMapping.json"), "UTF-8");
 		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
@@ -168,14 +185,13 @@ public class PreAnalyzedFieldMapperTest extends ESSingleNodeTestCase {
 		assertEquals(1877L, yearField.numericValue());
 	}
 
-	@Test
 	public void testPreAnalyzedTokenStream() throws IOException {
 		XContentBuilder tsBuilder = jsonBuilder().startObject().field("v", "1")
 				.field("str", "This string should be stored.").startArray("tokens");
 		tsBuilder.startObject().field("t", "testterm1").field("s", 1).field("e", 8).endObject();
 		tsBuilder.startObject().field("t", "testterm2").field("s", 1).field("e", 8).field("i", 0).endObject();
 		tsBuilder.startObject().field("t", "testterm3").field("s", 9).field("e", 15).endObject();
-		tsBuilder.startObject().field("t", "testterm4").field("p", Base64.encodeBytes("my payload".getBytes()))
+		tsBuilder.startObject().field("t", "testterm4").field("p", Base64.encodeBytes("my payload".getBytes(StandardCharsets.UTF_8)))
 				.field("y", "testtype").field("f", "0x4").endObject();
 		tsBuilder.endArray().endObject();
 		XContentParser parser = XContentHelper.createParser(tsBuilder.bytesStream().bytes());
@@ -231,7 +247,7 @@ public class PreAnalyzedFieldMapperTest extends ESSingleNodeTestCase {
 			assertEquals(0, offsetAtt.startOffset());
 			assertEquals(0, offsetAtt.endOffset());
 			assertEquals(1, posIncrAtt.getPositionIncrement());
-			assertEquals("my payload", new String(Base64.decode(payloadAtt.getPayload().bytes)));
+			assertEquals("my payload", new String(Base64.decode(payloadAtt.getPayload().bytes), StandardCharsets.UTF_8));
 			assertEquals(4, flagsAtt.getFlags());
 			assertEquals("testtype", typeAtt.type());
 		}
