@@ -41,8 +41,8 @@ import org.elasticsearch.test.ESIntegTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
-@ESIntegTestCase.ClusterScope(scope = ESIntegTestCase.Scope.TEST, numDataNodes = 0)
-public class PreanalyzedIntegrationTests extends ESIntegTestCase {
+//@ESIntegTestCase.ClusterScope(scope = ESIntegTestCase.Scope.SUITE, numDataNodes = 0)
+public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 
 //	@Override
 //	protected Settings nodeSettings(int nodeOrdinal) {
