@@ -101,6 +101,60 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 		assertFalse(fieldType.stored());
 		// check the token stream
 		TokenStream ts = fields[0].tokenStream(null, null);
+		parsedPreanalyzedTokensCorrect(ts);
+
+		fieldType = fields[1].fieldType();
+		assertEquals(IndexOptions.NONE, fieldType.indexOptions());
+		assertFalse(fieldType.tokenized());
+		assertFalse(fieldType.storeTermVectorOffsets());
+		assertFalse(fieldType.storeTermVectorPositions());
+		assertTrue(fieldType.stored());
+		assertEquals("Black Beauty ran past the bloody barn.", fields[1].stringValue());
+
+		// End field "title"
+
+		IndexableField yearField = doc.getField("year");
+		assertNotNull(yearField);
+		assertEquals(1877L, yearField.numericValue());
+	}
+	
+	public void testCopyField() throws Exception {
+		String mapping = IOUtils.toString(getClass().getResourceAsStream("/copyToMapping.json"), "UTF-8");
+		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
+		DocumentMapper docMapper = parser.parse(mapping);
+		SourceToParse source = SourceToParse.source(new BytesArray(docBytes));
+		Document doc = docMapper.parse("test", null, "1", source.source()).rootDoc();
+
+		// Check field: "author"
+		IndexableField field = doc.getField("author");
+		assertNotNull(field);
+		assertEquals("Anna Sewell", field.stringValue());
+		
+		// Check field: "title_copy"
+
+		IndexableField[] fields = doc.getFields("title_copy");
+		// "title" is a preanalyzed field that is also stored (see mapping). We
+		// have to create two fields: one with the
+		// pre-analyzed token stream and one with the stored value.
+		assertEquals(1, fields.length);
+		IndexableFieldType fieldType = fields[0].fieldType();
+		assertEquals(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS, fieldType.indexOptions());
+		assertTrue(fieldType.tokenized());
+		assertFalse(fieldType.storeTermVectorOffsets());
+		assertFalse(fieldType.storeTermVectorPositions());
+		assertFalse(fieldType.stored());
+		// check the token stream
+		TokenStream ts = fields[0].tokenStream(null, null);
+		parsedPreanalyzedTokensCorrect(ts);
+
+		// End field "title"
+
+		IndexableField yearField = doc.getField("year");
+		assertNotNull(yearField);
+		assertEquals(1877L, yearField.numericValue());
+	}
+
+	private void parsedPreanalyzedTokensCorrect(TokenStream ts) throws IOException {
 		CharTermAttribute termAtt = ts.addAttribute(CharTermAttribute.class);
 		OffsetAttribute offsetAtt = ts.addAttribute(OffsetAttribute.class);
 		PositionIncrementAttribute posIncrAtt = ts.addAttribute(PositionIncrementAttribute.class);
@@ -169,20 +223,6 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 		assertEquals(37, offsetAtt.startOffset());
 		assertEquals(38, offsetAtt.endOffset());
 		assertEquals(1, posIncrAtt.getPositionIncrement());
-
-		fieldType = fields[1].fieldType();
-		assertEquals(IndexOptions.NONE, fieldType.indexOptions());
-		assertFalse(fieldType.tokenized());
-		assertFalse(fieldType.storeTermVectorOffsets());
-		assertFalse(fieldType.storeTermVectorPositions());
-		assertTrue(fieldType.stored());
-		assertEquals("Black Beauty ran past the bloody barn.", fields[1].stringValue());
-
-		// End field "title"
-
-		IndexableField yearField = doc.getField("year");
-		assertNotNull(yearField);
-		assertEquals(1877L, yearField.numericValue());
 	}
 
 	public void testPreAnalyzedTokenStream() throws IOException {

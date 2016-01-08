@@ -36,26 +36,19 @@ import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.common.collect.Tuple;
-import org.elasticsearch.common.inject.name.Names;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentParser.Token;
-import org.elasticsearch.index.analysis.NamedAnalyzer;
-import org.elasticsearch.index.fielddata.FieldDataType;
+import org.elasticsearch.common.xcontent.json.JsonXContentParser;
 import org.elasticsearch.index.mapper.FieldMapper;
-import org.elasticsearch.index.mapper.FieldMapper.CopyTo;
-import org.elasticsearch.index.mapper.FieldMapper.MultiFields;
 import org.elasticsearch.index.mapper.MappedFieldType;
 import org.elasticsearch.index.mapper.Mapper;
-import org.elasticsearch.index.mapper.Mapper.BuilderContext;
 import org.elasticsearch.index.mapper.MapperParsingException;
-import org.elasticsearch.index.mapper.MergeMappingException;
-import org.elasticsearch.index.mapper.MergeResult;
 import org.elasticsearch.index.mapper.ParseContext;
-import org.elasticsearch.index.mapper.core.StringFieldMapper;
 import org.elasticsearch.index.mapper.core.TypeParsers;
 import org.elasticsearch.index.mapper.internal.AllFieldMapper;
-import org.elasticsearch.index.similarity.SimilarityProvider;
+
+import com.fasterxml.jackson.core.JsonFactory;
 
 public class PreAnalyzedMapper extends FieldMapper implements AllFieldMapper.IncludeInAll {
 
@@ -72,7 +65,7 @@ public class PreAnalyzedMapper extends FieldMapper implements AllFieldMapper.Inc
 		@Override
 		public PreAnalyzedMapper build(BuilderContext context) {
 			setupFieldType(context);
-			
+
 			// A preanalyzed field actually consists of two fields: an analyzed
 			// field with a TokenStream value parsed from the JSON in the sent
 			// documents, and a not-analyzed but only stored counterpart that
@@ -91,14 +84,14 @@ public class PreAnalyzedMapper extends FieldMapper implements AllFieldMapper.Inc
 			// The indexed part inherits all properties from the actually parsed
 			// fieldType with the exception of the stored property which just
 			// went into the fieldTypeText fieldType above.
-			// We cannot change the fieldType directly because this would just switch off storage off the field completely.
+			// We cannot change the fieldType directly because this would just
+			// switch off storage off the field completely.
 			MappedFieldType fieldTypeIndexed = fieldType.clone();
 			fieldTypeIndexed.setStored(false);
 
 			return new PreAnalyzedMapper(name, fieldType, defaultFieldType, context.indexSettings(),
 					multiFieldsBuilder.build(this, context), copyTo, fieldTypeText, fieldTypeIndexed);
 		}
-
 
 	}
 
@@ -166,9 +159,15 @@ public class PreAnalyzedMapper extends FieldMapper implements AllFieldMapper.Inc
 	 */
 	private FieldType fieldTypeText;
 	private MappedFieldType fieldTypeIndexed;
+	private final static JsonFactory jsonFactory;
+
+	static {
+		jsonFactory = new JsonFactory();
+	}
 
 	public PreAnalyzedMapper(String simpleName, MappedFieldType fieldType, MappedFieldType defaultFieldType,
-			Settings indexSettings, MultiFields multiFields, CopyTo copyTo, FieldType fieldTypeText, MappedFieldType fieldTypeIndexed) {
+			Settings indexSettings, MultiFields multiFields, CopyTo copyTo, FieldType fieldTypeText,
+			MappedFieldType fieldTypeIndexed) {
 		super(simpleName, fieldType, defaultFieldType, indexSettings, multiFields, copyTo);
 		this.fieldTypeText = fieldTypeText;
 		this.fieldTypeIndexed = fieldTypeIndexed;
@@ -176,49 +175,58 @@ public class PreAnalyzedMapper extends FieldMapper implements AllFieldMapper.Inc
 
 	@Override
 	protected void parseCreateField(ParseContext context, List<Field> fields) throws IOException {
+		String preAnalyzedJson = context.parser().textOrNull();
+		if (null == preAnalyzedJson)
+			return;
 
-		Tuple<PreAnalyzedStoredValue, TokenStream> valueAndTokenStream = parsePreAnalyzedFieldContents(
-				context.parser());
+		try (XContentParser parser = new JsonXContentParser(jsonFactory.createParser(preAnalyzedJson))) {
+			Tuple<PreAnalyzedStoredValue, TokenStream> valueAndTokenStream;
+			try {
+				valueAndTokenStream = parsePreAnalyzedFieldContents(parser);
+			} catch (MapperParsingException e) {
+				throw new MapperParsingException("Could not read preanalyzed field value of document " + context.id(),
+						e);
+			}
 
-		// We actually create two fields: First, a TokenStream (cannot be
-		// stored!) field for the analyzed part of the
-		// preanalyzed field. That is done next up.
-		// Further below, if the field should also be stored, we also create a
-		// new, un-analyzed but stored field with
-		// the same name.
-		// This will give us a stored and analyzed field in the index
-		// eventually.
-		if (fieldType().indexOptions() != IndexOptions.NONE && fieldType().tokenized()) {
-			TokenStream ts = valueAndTokenStream.v2();
-			if (null == ts) {
-				String value = null;
-				if (valueAndTokenStream
-						.v1().type == org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper.PreAnalyzedStoredValue.VALUE_TYPE.STRING) {
-					value = (String) valueAndTokenStream.v1().value;
-					if (value.length() > 200)
-						value = value.substring(0, 200);
+			// We actually create two fields: First, a TokenStream (cannot be
+			// stored!) field for the analyzed part of the
+			// preanalyzed field. That is done next up.
+			// Further below, if the field should also be stored, we also create
+			// a new, un-analyzed but stored field with
+			// the same name.
+			// This will give us a stored and analyzed field in the index
+			// eventually.
+			if (fieldType().indexOptions() != IndexOptions.NONE && fieldType().tokenized()) {
+				TokenStream ts = valueAndTokenStream.v2();
+				if (null == ts) {
+					String value = null;
+					if (valueAndTokenStream
+							.v1().type == org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper.PreAnalyzedStoredValue.VALUE_TYPE.STRING) {
+						value = (String) valueAndTokenStream.v1().value;
+						if (value.length() > 200)
+							value = value.substring(0, 200);
+					}
+					throw new IllegalStateException("The preanalyzed field \"" + fieldType().names().fullName()
+							+ "\" is tokenized and indexed, but no preanalyzed TokenStream could be found. (id: "
+							+ context.id() + "; field value: " + value + ")");
+
+				} else {
+					Field field = new Field(fieldTypeIndexed.names().indexName(), ts, fieldTypeIndexed);
+					fields.add(field);
 				}
-				throw new IllegalStateException("The preanalyzed field \"" + fieldType().names().fullName()
-						+ "\" is tokenized and indexed, but no preanalyzed TokenStream could be found. (id: "
-						+ context.id() + "; field value: " + value + ")");
+			}
 
-			} else {
-				Field field = new Field(fieldTypeIndexed.names().indexName(), ts, fieldTypeIndexed);
+			PreAnalyzedStoredValue storedValue = valueAndTokenStream.v1();
+			if (fieldTypeText.stored() && null != storedValue.value) {
+				Field field;
+				if (PreAnalyzedStoredValue.VALUE_TYPE.STRING == storedValue.type) {
+					field = new Field(fieldType().names().indexName(), (String) storedValue.value, fieldTypeText);
+				} else {
+					field = new Field(fieldType().names().indexName(), (BytesRef) storedValue.value, fieldTypeText);
+				}
 				fields.add(field);
 			}
 		}
-
-		PreAnalyzedStoredValue storedValue = valueAndTokenStream.v1();
-		if (fieldTypeText.stored() && null != storedValue.value) {
-			Field field;
-			if (PreAnalyzedStoredValue.VALUE_TYPE.STRING == storedValue.type) {
-				field = new Field(fieldType().names().indexName(), (String) storedValue.value, fieldTypeText);
-			} else {
-				field = new Field(fieldType().names().indexName(), (BytesRef) storedValue.value, fieldTypeText);
-			}
-			fields.add(field);
-		}
-
 	}
 
 	/**
@@ -234,6 +242,7 @@ public class PreAnalyzedMapper extends FieldMapper implements AllFieldMapper.Inc
 	 */
 	private Tuple<PreAnalyzedStoredValue, TokenStream> parsePreAnalyzedFieldContents(XContentParser parser) {
 		try {
+
 			Token currentToken = parser.currentToken();
 			String currentFieldName = "";
 			String version = null;
@@ -262,12 +271,16 @@ public class PreAnalyzedMapper extends FieldMapper implements AllFieldMapper.Inc
 			}
 
 			if (null == version) {
-				throw new MapperParsingException("No version of pre-analyzed field format has been specified.");
+				throw new MapperParsingException("No version of pre-analyzed field format has been specified for field "
+						+ fieldType().names().fullName());
 			}
 
 			return new Tuple<PreAnalyzedStoredValue, TokenStream>(storedValue, ts);
 		} catch (IOException e) {
-			throw new MapperParsingException("The input document could not be parsed as a preanalyzed field value.", e);
+			throw new MapperParsingException(
+					"The input document could not be parsed as a preanalyzed field value for field "
+							+ fieldType().names().fullName() + ".",
+					e);
 		}
 	}
 
@@ -332,7 +345,7 @@ public class PreAnalyzedMapper extends FieldMapper implements AllFieldMapper.Inc
 						if ("t".equals(currentFieldName)) {
 							char[] tokenBuffer = parser.textCharacters();
 							char[] bufferCopy = new char[parser.textLength()];
-							System.arraycopy(tokenBuffer, 0, bufferCopy, 0, bufferCopy.length);
+							System.arraycopy(tokenBuffer, parser.textOffset(), bufferCopy, 0, bufferCopy.length);
 							tokenMap.put("t", bufferCopy);
 							termFound = true;
 						} else if ("p".equals(currentFieldName)) {
