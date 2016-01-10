@@ -1,12 +1,13 @@
 elasticsearch-mapper-preanalyzed
 ================================
 
-An ElasticSearch mapper plugin that allows to index preanalyzed TokenStreams, i.e. to circumvent an index analyzer in ElasticSearch and instead specifying each token to be indexed separatly.
+An ElasticSearch mapper plugin that allows to index preanalyzed TokenStreams, i.e. to circumvent an index analyzer in ElasticSearch and instead exactly specifying each single token to be indexed.
 
 ElasticSearch compatibility table:
 
 | elasticsearch |  Preanalyzed Mapper Plugin | Docs
 |---------------|----------------------------|------
+| es-2.1        |  2.1.1 | [2.1.1] (https://github.com/khituras/elasticsearch-mapper-preanalyzed/tree/master)
 | es-1.7		|  0.1.0 | [0.1.0] (https://github.com/khituras/elasticsearch-mapper-preanalyzed/tree/es-1.7)
 | es-1.5        |  0.0.5 | [0.0.5] (https://github.com/khituras/elasticsearch-mapper-preanalyzed/tree/es-1.5)
 | es-1.4        |  0.0.4 | [0.0.4] (https://github.com/khituras/elasticsearch-mapper-preanalyzed/tree/es-1.4)
@@ -20,11 +21,12 @@ After installing the plugin, all you have to do is to define a mapping using thi
 
      "entityAnnotatedDocumentText": {
           "type": "preanalyzed"
-          "search_analyzer": "my_custom_analyzer",
+          "analyzer": "my_custom_analyzer",
           "store": "yes",
           "term_vector": "with_positions_offsets"
       }
         
+The "analyzer" setting will be used for search query analysis and have no consequences for indexing.
 Most, if not all, options for string fields are applicable to the preanalyzed mapping type.
 
 PLEASE NOTE: The author of this software makes no guarantee as to whether the software works as intended, causes no damage to your application environment or that it won't have side effects. While this software has been applied successfully in the author's own work, he is not specifically an ElasticSearch related developer and might do things differently from what the ElasticSearch developers intended. Please test the use of this software in your environment thoroughly before setting up a production system employing this plugin.
