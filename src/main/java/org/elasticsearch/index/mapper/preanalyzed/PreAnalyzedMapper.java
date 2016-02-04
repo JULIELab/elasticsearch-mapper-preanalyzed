@@ -198,19 +198,20 @@ public class PreAnalyzedMapper extends FieldMapper implements AllFieldMapper.Inc
 			// eventually.
 			if (fieldType().indexOptions() != IndexOptions.NONE && fieldType().tokenized()) {
 				TokenStream ts = valueAndTokenStream.v2();
-				if (null == ts) {
-					String value = null;
-					if (valueAndTokenStream
-							.v1().type == org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper.PreAnalyzedStoredValue.VALUE_TYPE.STRING) {
-						value = (String) valueAndTokenStream.v1().value;
-						if (value.length() > 200)
-							value = value.substring(0, 200);
-					}
-					throw new IllegalStateException("The preanalyzed field \"" + fieldType().names().fullName()
-							+ "\" is tokenized and indexed, but no preanalyzed TokenStream could be found. (id: "
-							+ context.id() + "; field value: " + value + ")");
-
-				} else {
+//				if (null == ts) {
+//					String value = null;
+//					if (valueAndTokenStream
+//							.v1().type == org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper.PreAnalyzedStoredValue.VALUE_TYPE.STRING) {
+//						value = (String) valueAndTokenStream.v1().value;
+//						if (value.length() > 200)
+//							value = value.substring(0, 200);
+//					}
+//					throw new IllegalStateException("The preanalyzed field \"" + fieldType().names().fullName()
+//							+ "\" is tokenized and indexed, but no preanalyzed TokenStream could be found. (id: "
+//							+ context.id() + "; field value: " + value + ")");
+//
+//				} else {
+				if (ts != null) {
 					Field field = new Field(fieldTypeIndexed.names().indexName(), ts, fieldTypeIndexed);
 					fields.add(field);
 				}
