@@ -50,7 +50,7 @@
 	<parent>
 		<groupId>org.elasticsearch.plugin</groupId>
 		<artifactId>plugins</artifactId>
-		<version>2.1.1</version>
+		<version>2.1.2</version>
 	</parent>
 	<description>Provides the preanalyzed field datatype. The plugin allows to specify the exact terms of a field in JSON format without any further analysis being done.</description>
 </project>
