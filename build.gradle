@@ -1,0 +1,68 @@
+apply plugin: 'elasticsearch.esplugin'
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'idea'
+
+group = 'de.julielab'
+version = '5.2.2'
+
+esplugin {
+    name 'elasticsearch-mapper-preanalyzed'
+    description 'This plugin allows to send field data in a preanalyzed format to ElasticSearch. No analysis will be done by ElasticSearch, the format defines all terms specifically.'
+    classname 'org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin'
+}
+
+description = """ElasticSearch Preanalyzed Mapper Plugin"""
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+tasks.withType(JavaCompile) {
+	options.encoding = 'UTF-8'
+}
+
+// We don't have unit tests, only integration tests.
+test.enabled = false
+
+configurations.all {
+}
+
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        classpath "org.elasticsearch.gradle:build-tools:5.2.2"
+    }
+}
+
+// esplugin forces transitive:false on all dependencies
+// so list all transitive dependencies individually
+dependencies {
+    compile "org.carrot2:carrot2-mini:3.15.0"
+    compile "org.simpleframework:simple-xml:2.7.1"
+    compile "com.carrotsearch:hppc:0.7.1"
+    compile "org.carrot2.attributes:attributes-binder:1.3.1"
+    compile "org.simpleframework:simple-xml:2.7.1"
+    compile "org.carrot2.shaded:carrot2-guava:18.0"
+    compile "commons-lang:commons-lang:2.6"
+    compile "com.fasterxml.jackson.core:jackson-core:2.8.6"
+    compile "com.fasterxml.jackson.core:jackson-annotations:2.8.6"
+    compile "com.fasterxml.jackson.core:jackson-databind:2.8.6"
+    compile "org.slf4j:slf4j-api:1.7.13"
+    compile "org.carrot2:morfologik-stemming:2.1.0"
+    compile "org.carrot2:morfologik-fsa:2.1.0"
+
+    testCompile "org.assertj:assertj-core:2.1.0"
+    testCompile "org.json:json:20140107"
+    testCompile "org.elasticsearch.client:transport:5.2.2"
+    testCompile 'commons-io:commons-io:2.5'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
