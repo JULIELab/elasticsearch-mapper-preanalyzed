@@ -18,10 +18,11 @@
  */
 package org.elasticsearch.index.plugin.mapper.preanalyzed;
 
+import java.util.Collections;
 import java.util.Map;
 
-import org.elasticsearch.index.IndexModule;
 import org.elasticsearch.index.mapper.Mapper.TypeParser;
+import org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper;
 import org.elasticsearch.plugins.MapperPlugin;
 import org.elasticsearch.plugins.Plugin;
 
@@ -29,8 +30,7 @@ public class MapperPreAnalyzedPlugin extends Plugin implements MapperPlugin {
 
 	@Override
 	public Map<String, TypeParser> getMappers() {
-		// TODO Auto-generated method stub
-		return MapperPlugin.super.getMappers();
+		return Collections.singletonMap("preanalyzed", new PreAnalyzedMapper.TypeParser());
 	}
 
 	

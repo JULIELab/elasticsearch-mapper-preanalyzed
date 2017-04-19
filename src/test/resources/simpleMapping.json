@@ -2,13 +2,15 @@
     "document":{
         "properties":{
             "title":{
+            	"search_analyzer": "keyword",
                 "analyzer": "keyword",
           		"store": true,
           		"term_vector": "with_positions_offsets",
           		"type": "preanalyzed"
             },
             "author":{
-            	"type":"text"
+            	"type":"text",
+            	"analyzer" : "whitespace"
             }
         }
     }

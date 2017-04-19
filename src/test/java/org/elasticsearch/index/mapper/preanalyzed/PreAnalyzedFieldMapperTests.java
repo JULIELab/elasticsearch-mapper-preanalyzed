@@ -20,7 +20,6 @@ package org.elasticsearch.index.mapper.preanalyzed;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -51,8 +50,6 @@ import org.elasticsearch.index.mapper.DocumentMapperParser;
 import org.elasticsearch.index.mapper.Mapper;
 import org.elasticsearch.index.mapper.MetadataFieldMapper;
 import org.elasticsearch.index.mapper.ParseContext.Document;
-import org.elasticsearch.index.mapper.SourceToParse;
-import org.elasticsearch.index.mapper.StringFieldMapper;
 import org.elasticsearch.index.mapper.TextFieldMapper;
 import org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper.PreAnalyzedTokenStream;
 import org.elasticsearch.indices.mapper.MapperRegistry;
@@ -72,15 +69,15 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 		typeParsers.put(PreAnalyzedMapper.CONTENT_TYPE,
 						new PreAnalyzedMapper.TypeParser());
 		typeParsers.put("text", new TextFieldMapper.TypeParser());
-		typeParsers.put(StringFieldMapper.CONTENT_TYPE, new StringFieldMapper.TypeParser());
 		mapperRegistry = new MapperRegistry(typeParsers, Collections.<String, MetadataFieldMapper.TypeParser> emptyMap());
 		parser = new DocumentMapperParser(indexService.getIndexSettings(), indexService.mapperService(),
 				indexService.getIndexAnalyzers(), null, indexService.similarityService(), mapperRegistry, null);
 	}
 
 	public void testSimple() throws Exception {
-		String mapping = IOUtils.toString(new FileInputStream("src/test/resources/simpleMapping.json"), "UTF-8");
-		byte[] docBytes = IOUtils.toByteArray(new FileInputStream("src/test/resources/preanalyzedDoc.json"));
+		// note: you must possibly configure your IDE / build system to copy the test resources into the build folder
+		String mapping = IOUtils.toString(getClass().getResourceAsStream("/simpleMapping.json"), "UTF-8");
+		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
 		DocumentMapper docMapper = parser.parse(null, new CompressedXContent(mapping));
 		Document doc = docMapper.parse("test", "document", "1", new BytesArray(docBytes)).rootDoc();
 
@@ -122,8 +119,9 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 	}
 	
 	public void testCopyField() throws Exception {
-		String mapping = IOUtils.toString(new FileInputStream("src/test/resources/copyToMapping.json"), "UTF-8");
-		byte[] docBytes = IOUtils.toByteArray(new FileInputStream("src/test/resources/preanalyzedDoc.json"));
+		// note: you must possibly configure your IDE / build system to copy the test resources into the build folder
+		String mapping = IOUtils.toString(getClass().getResourceAsStream("/copyToMapping.json"), "UTF-8");
+		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
 		DocumentMapper docMapper = parser.parse(null, new CompressedXContent(mapping));
 		Document doc = docMapper.parse("test", "document", "1", new BytesArray(docBytes)).rootDoc();
 

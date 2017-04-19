@@ -2,6 +2,7 @@ apply plugin: 'elasticsearch.esplugin'
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'idea'
+apply plugin: 'eclipse'
 
 group = 'de.julielab'
 version = '5.2.2'
@@ -23,8 +24,6 @@ tasks.withType(JavaCompile) {
 // We don't have unit tests, only integration tests.
 test.enabled = false
 
-configurations.all {
-}
 
 buildscript {
     repositories {
