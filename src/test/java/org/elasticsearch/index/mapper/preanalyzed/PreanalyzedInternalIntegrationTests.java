@@ -58,10 +58,9 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 	/**
 	 * Check that the analysis conforms to the "keyword" analyzer
 	 * 
-	 * @throws Exception
-	 * @throws InterruptedException
+	 * @throws Exception If something goes wrong.
 	 */
-	public void testAnalysis() throws InterruptedException, Exception {
+	public void testAnalysis() throws Exception {
 		// note: you must possibly configure your IDE / build system to copy the
 		// test resources into the build folder
 		String mapping = IOUtils.toString(getClass().getResourceAsStream("/simpleMapping.json"), "UTF-8");

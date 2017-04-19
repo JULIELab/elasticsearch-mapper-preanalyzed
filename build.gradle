@@ -21,9 +21,6 @@ tasks.withType(JavaCompile) {
 	options.encoding = 'UTF-8'
 }
 
-// We don't have unit tests, only integration tests.
-test.enabled = false
-
 
 buildscript {
     repositories {
@@ -64,4 +61,5 @@ repositories {
     mavenLocal()
     mavenCentral()
 }
+
 
