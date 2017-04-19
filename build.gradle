@@ -6,7 +6,7 @@ apply plugin: 'eclipse'
 apply plugin: 'signing'
 
 group = 'de.julielab'
-version = '5.2.2-SNAPSHOT'
+version = '5.2.2'
 
 esplugin {
     name 'elasticsearch-mapper-preanalyzed'
@@ -52,12 +52,13 @@ artifacts {
     archives javadocJar, sourcesJar
 }
 
+// for access to the correct signature see https://docs.gradle.org/current/userguide/signing_plugin.html#sec:signatory_credentials
+signing {
+    sign configurations.archives
+}
+    
 project.gradle.taskGraph.whenReady { taskGraph ->
   if (taskGraph.allTasks.any { it.name == 'uploadArchives' }) {
- 	// for access to the correct signature see https://docs.gradle.org/current/userguide/signing_plugin.html#sec:signatory_credentials
-    signing {
-        sign configurations.archives
-    }
 
     uploadArchives {
       repositories {
