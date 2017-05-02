@@ -1,0 +1,110 @@
+apply plugin: 'elasticsearch.esplugin'
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'idea'
+apply plugin: 'eclipse'
+apply plugin: 'signing'
+
+group = 'de.julielab'
+version = '5.2.2'
+
+esplugin {
+    name 'elasticsearch-mapper-preanalyzed'
+    description 'This plugin allows to send field data in a preanalyzed format to ElasticSearch. No analysis will be done by ElasticSearch, the format defines all terms specifically.'
+    classname 'org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin'
+    version '5.2.2'
+}
+
+description = """ElasticSearch Preanalyzed Mapper Plugin"""
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+tasks.withType(JavaCompile) {
+	options.encoding = 'UTF-8'
+}
+
+
+buildscript {
+    repositories {
+        // for the build-tools
+        mavenCentral()
+        // for some build-tools dependencies
+        jcenter()
+        // for caching
+        mavenLocal()
+    }
+
+    dependencies {
+        classpath "org.elasticsearch.gradle:build-tools:5.2.2"
+    }
+}
+
+dependencies {
+    testCompile 'commons-io:commons-io:2.5'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+artifacts {
+    archives javadocJar, sourcesJar
+}
+
+// for access to the correct signature see https://docs.gradle.org/current/userguide/signing_plugin.html#sec:signatory_credentials
+signing {
+    sign configurations.archives
+}
+    
+project.gradle.taskGraph.whenReady { taskGraph ->
+  if (taskGraph.allTasks.any { it.name == 'uploadArchives' }) {
+
+    uploadArchives {
+      repositories {
+        mavenDeployer {
+          beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+		  // analogous to the PGP signature credentials, the nexusUsername and nexusPassword properties could be defined
+		  // in the local ~/.gradle/gradle.properties file
+          repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+            authentication(userName: nexusUsername, password: nexusPassword)
+          }
+
+          snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+            authentication(userName: nexusUsername, password: nexusPassword)
+          }
+
+          pom.project {
+            name 'ElasticSearch Preanalyzed Mapper Plugin'
+            packaging 'zip'
+            artifactId 'elasticsearch-mapper-preanalyzed'
+            description 'This plugin allows to send field data in a preanalyzed format to ElasticSearch. No analysis will be done by ElasticSearch, the format defines all terms specifically.'
+            url 'https://github.com/khituras/elasticsearch-mapper-preanalyzed'
+
+            scm {
+              connection 'scm:git:https://github.com/khituras/elasticsearch-mapper-preanalyzed'
+              developerConnection 'scm:git:git@github.com:khituras/elasticsearch-mapper-preanalyzed.git'
+              url 'https://github.com/khituras/elasticsearch-mapper-preanalyzed'
+            }
+
+            licenses {
+              license {
+                name 'The Apache License, Version 2.0'
+                url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+              }
+            }
+
+            developers {
+              developer {
+                id 'erik.faessler'
+                name 'Erik Faessler'
+                email 'erik.faessler@uni-jena.de'
+              }
+            }        
+          }
+        }
+      }
+    }
+  }
+}
