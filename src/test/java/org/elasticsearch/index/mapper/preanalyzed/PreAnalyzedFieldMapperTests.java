@@ -44,6 +44,7 @@ import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.IndexService;
 import org.elasticsearch.index.mapper.DocumentMapper;
 import org.elasticsearch.index.mapper.DocumentMapperParser;
@@ -235,7 +236,7 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 				.field("y", "testtype").field("f", "0x4").endObject();
 		
 		tsBuilder.endArray().endObject();
-		XContentParser parser = XContentHelper.createParser(NamedXContentRegistry.EMPTY, tsBuilder.bytes());
+		XContentParser parser = XContentHelper.createParser(NamedXContentRegistry.EMPTY, tsBuilder.bytes(), XContentType.JSON);
 		parser.nextToken(); // begin object
 		parser.nextToken();
 		assertEquals(XContentParser.Token.FIELD_NAME, parser.currentToken()); // "v"
