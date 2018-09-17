@@ -18,15 +18,6 @@
  */
 package org.elasticsearch.index.mapper.preanalyzed;
 
-import static org.elasticsearch.client.Requests.putMappingRequest;
-import static org.elasticsearch.index.query.QueryBuilders.matchPhraseQuery;
-import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
-import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-
 import org.apache.commons.io.IOUtils;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
@@ -40,6 +31,13 @@ import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.ESIntegTestCase;
 import org.junit.Before;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+
+import static org.elasticsearch.client.Requests.putMappingRequest;
+import static org.elasticsearch.index.query.QueryBuilders.*;
 
 //@ESIntegTestCase.ClusterScope(scope = ESIntegTestCase.Scope.SUITE, numDataNodes = 0)
 public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
@@ -135,6 +133,6 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 				.execute().actionGet();
 		assertEquals(1, searchResponse.getHits().getTotalHits());
 		SearchHit searchHit = searchResponse.getHits().getHits()[0];
-		assertTrue(((String) searchHit.getField("title").getValue()).startsWith("Black Beauty"));
+		assertTrue(((String) searchHit.field("title").getValue()).startsWith("Black Beauty"));
 	}
 }
