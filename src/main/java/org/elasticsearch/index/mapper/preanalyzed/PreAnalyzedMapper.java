@@ -35,6 +35,10 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.search.NormsFieldExistsQuery;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Settings;
@@ -42,14 +46,10 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentParser.Token;
 import org.elasticsearch.common.xcontent.json.JsonXContentParser;
-import org.elasticsearch.index.mapper.FieldMapper;
-import org.elasticsearch.index.mapper.MappedFieldType;
-import org.elasticsearch.index.mapper.Mapper;
-import org.elasticsearch.index.mapper.MapperParsingException;
-import org.elasticsearch.index.mapper.ParseContext;
-import org.elasticsearch.index.mapper.TypeParsers;
+import org.elasticsearch.index.mapper.*;
 
 import com.fasterxml.jackson.core.JsonFactory;
+import org.elasticsearch.index.query.QueryShardContext;
 
 public class PreAnalyzedMapper extends FieldMapper {
 
@@ -160,6 +160,15 @@ public class PreAnalyzedMapper extends FieldMapper {
 		@Override
 		public String typeName() {
 			return CONTENT_TYPE;
+		}
+
+		@Override
+		public Query existsQuery(QueryShardContext context) {
+			if (omitNorms()) {
+				return new TermQuery(new Term(FieldNamesFieldMapper.NAME, name()));
+			} else {
+				return new NormsFieldExistsQuery(name());
+			}
 		}
 
 	}
