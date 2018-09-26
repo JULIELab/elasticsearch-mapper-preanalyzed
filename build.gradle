@@ -6,13 +6,13 @@ apply plugin: 'eclipse'
 apply plugin: 'signing'
 
 group = 'de.julielab'
-version = '5.4.1'
+version = '5.4.3'
 
 esplugin {
     name 'elasticsearch-mapper-preanalyzed'
     description 'This plugin allows to send field data in a preanalyzed format to ElasticSearch. No analysis will be done by ElasticSearch, the format defines all terms specifically.'
     classname 'org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin'
-    version '5.4.1'
+    version '5.4.3'
 }
 
 description = """ElasticSearch Preanalyzed Mapper Plugin"""
@@ -35,7 +35,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "org.elasticsearch.gradle:build-tools:5.4.1"
+        classpath "org.elasticsearch.gradle:build-tools:5.4.3"
     }
 }
 
