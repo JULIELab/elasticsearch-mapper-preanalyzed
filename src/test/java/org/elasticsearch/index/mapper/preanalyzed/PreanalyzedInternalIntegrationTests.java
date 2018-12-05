@@ -30,26 +30,17 @@ import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
-import org.elasticsearch.action.count.CountResponse;
+import org.elasticsearch.action.search.SearchAction;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.ESIntegTestCase;
 import org.junit.Before;
-import org.junit.Test;
 
 //@ESIntegTestCase.ClusterScope(scope = ESIntegTestCase.Scope.SUITE, numDataNodes = 0)
 public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
-
-//	@Override
-//	protected Settings nodeSettings(int nodeOrdinal) {
-//		
-//		return Settings.builder().put(super.nodeSettings(nodeOrdinal))
-//				.put("plugins." + PluginsService.LOAD_PLUGIN_FROM_CLASSPATH, true).build();
-//	}
 	
 	 @Override
 	    protected Collection<Class<? extends Plugin>> nodePlugins() {
@@ -85,46 +76,48 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		index("test", "document", "1", XContentHelper.convertToJson(docBytes, 0, docBytes.length, false));
 		refresh();
 
-		CountResponse countResponse =
-				client().prepareCount("test").setQuery(queryStringQuery("Black").defaultField("title")).execute().get();
-		assertEquals(1l, countResponse.getCount());
+		SearchResponse searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+				.setQuery(queryStringQuery("Black").defaultField("title")).setSize(0).setIndices("test").execute()
+				.get();
+		assertEquals(1l, searchResponse.getHits().getTotalHits());
 
-		countResponse =
-				client().prepareCount("test").setQuery(queryStringQuery("black").defaultField("title")).execute().get();
-		assertEquals(0l, countResponse.getCount());
+		searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+				.setQuery(queryStringQuery("black").defaultField("title")).setSize(0).setIndices("test").execute()
+				.get();
+		assertEquals(0l, searchResponse.getHits().getTotalHits());
 
-		// actually, 'Black' and 'hero' are "on top of each other", 'hero' has a position increment of 0 and comes after
+		// actually, 'Black' and 'hero' are "on top of each other", 'hero' has a
+		// position increment of 0 and comes after
 		// 'Black'. we need to set a phrase slop to allow a match.
-		countResponse =
-				client().prepareCount("test")
-						.setQuery(matchPhraseQuery("title", "Black hero").analyzer("whitespace").slop(1)).execute()
-						.get();
-		assertEquals(1l, countResponse.getCount());
+		searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+				.setQuery(matchPhraseQuery("title", "Black hero").analyzer("whitespace").slop(1)).setSize(0)
+				.setIndices("test").execute().get();
+		assertEquals(1l, searchResponse.getHits().getTotalHits());
 
-		countResponse =
-				client().prepareCount("test")
-						.setQuery(matchPhraseQuery("title", "Beauty hero").analyzer("whitespace").slop(0)).execute()
-						.get();
-		assertEquals(0l, countResponse.getCount());
+		searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+				.setQuery(matchPhraseQuery("title", "Beauty hero").analyzer("whitespace").slop(0)).setSize(0)
+				.setIndices("test").execute().get();
+		assertEquals(0l, searchResponse.getHits().getTotalHits());
 
-		countResponse =
-				client().prepareCount("test")
-						.setQuery(matchPhraseQuery("title", "Beauty hero").analyzer("whitespace").slop(3)).execute()
-						.get();
-		assertEquals(1l, countResponse.getCount());
+		searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+				.setQuery(matchPhraseQuery("title", "Beauty hero").analyzer("whitespace").slop(3)).setSize(0)
+				.setIndices("test").execute().get();
+		assertEquals(1l, searchResponse.getHits().getTotalHits());
 
-		countResponse =
-				client().prepareCount("test").setQuery(queryStringQuery("Anne Sewell").defaultField("author"))
-						.execute().get();
-		assertEquals(1l, countResponse.getCount());
+		searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+				.setQuery(queryStringQuery("Anne Sewell").defaultField("author")).setSize(0).setIndices("test")
+				.execute().get();
+		assertEquals(1l, searchResponse.getHits().getTotalHits());
 
-		countResponse =
-				client().prepareCount("test").setQuery(queryStringQuery("1877").defaultField("year")).execute().get();
-		assertEquals(1l, countResponse.getCount());
-		
-		SearchResponse searchResponse = client().prepareSearch("test").setQuery(matchQuery("title", "Black")).addField("title").execute().actionGet();
+		searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+				.setQuery(queryStringQuery("1877").defaultField("year")).setSize(0).setIndices("test").execute().get();
+		assertEquals(1l, searchResponse.getHits().getTotalHits());
+
+		searchResponse = client().prepareSearch("test").setQuery(matchQuery("title", "Black")).addField("title")
+				.execute().actionGet();
 		assertEquals(1, searchResponse.getHits().getTotalHits());
 		SearchHit searchHit = searchResponse.getHits().getHits()[0];
-		assertTrue(((String)searchHit.field("title").value()).startsWith("Black Beauty"));
+		
+		assertTrue(((String) searchHit.field("title").value()).startsWith("Black Beauty"));
 	}
 }

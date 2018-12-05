@@ -39,6 +39,7 @@ import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.IndexableFieldType;
 import org.elasticsearch.common.Base64;
 import org.elasticsearch.common.bytes.BytesArray;
+import org.elasticsearch.common.compress.CompressedXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
@@ -77,7 +78,7 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 	public void testSimple() throws Exception {
 		String mapping = IOUtils.toString(getClass().getResourceAsStream("/simpleMapping.json"), "UTF-8");
 		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
-		DocumentMapper docMapper = parser.parse(mapping);
+		DocumentMapper docMapper = parser.parse(null, new CompressedXContent(mapping));
 		SourceToParse source = SourceToParse.source(new BytesArray(docBytes));
 		Document doc = docMapper.parse("test", null, "1", source.source()).rootDoc();
 
@@ -121,7 +122,7 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 	public void testCopyField() throws Exception {
 		String mapping = IOUtils.toString(getClass().getResourceAsStream("/copyToMapping.json"), "UTF-8");
 		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
-		DocumentMapper docMapper = parser.parse(mapping);
+		DocumentMapper docMapper = parser.parse(null, new CompressedXContent(mapping));
 		SourceToParse source = SourceToParse.source(new BytesArray(docBytes));
 		Document doc = docMapper.parse("test", null, "1", source.source()).rootDoc();
 
@@ -234,7 +235,7 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 		tsBuilder.startObject().field("t", "testterm4").field("p", Base64.encodeBytes("my payload".getBytes(StandardCharsets.UTF_8)))
 				.field("y", "testtype").field("f", "0x4").endObject();
 		tsBuilder.endArray().endObject();
-		XContentParser parser = XContentHelper.createParser(tsBuilder.bytesStream().bytes());
+		XContentParser parser = XContentHelper.createParser(tsBuilder.bytes());
 		parser.nextToken(); // begin object
 		parser.nextToken();
 		assertEquals(XContentParser.Token.FIELD_NAME, parser.currentToken()); // "v"
