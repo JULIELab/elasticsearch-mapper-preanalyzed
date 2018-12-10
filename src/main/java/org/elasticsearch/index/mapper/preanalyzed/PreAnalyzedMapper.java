@@ -248,7 +248,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 			PreAnalyzedTokenStream ts = null;
 			while ((currentToken = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
 				if (currentToken == XContentParser.Token.FIELD_NAME) {
-					currentFieldName = parser.text();
+					currentFieldName = parser.currentName();
 				} else if (currentToken == XContentParser.Token.VALUE_STRING) {
 					if ("v".equals(currentFieldName)) {
 						version = parser.text();
@@ -338,7 +338,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 				String currentFieldName = null;
 				while ((currentToken = parser.nextToken()) != XContentParser.Token.END_OBJECT) {
 					if (currentToken == XContentParser.Token.FIELD_NAME) {
-						currentFieldName = parser.text();
+						currentFieldName = parser.currentName();
 					} else if (currentToken == XContentParser.Token.VALUE_STRING) {
 						if ("t".equals(currentFieldName)) {
 							char[] tokenBuffer = parser.textCharacters();
