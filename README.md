@@ -7,15 +7,16 @@ ElasticSearch compatibility table:
 
 | elasticsearch |  Preanalyzed Mapper Plugin | Docs
 |---------------|----------------------------|------
-| es-2.3.5      |  2.3.5 | [2.3.5] (https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.3.5)
-| es-2.3.0      |  2.3.0 | [2.3.0] (https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.3.0)
-| es-2.2.2      |  2.2.2 | [2.2.2] (https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.2.2)
-| es-2.2.0      |  2.2.0 | [2.2.0] (https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.2.0)
-| es-2.1.2      |  2.1.2 | [2.1.2] (https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.1.2)
-| es-2.1.1      |  2.1.1 | [2.1.1] (https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.1.1)
-| es-1.7		|  0.1.0 | [0.1.0] (https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-1.7)
-| es-1.5        |  0.0.5 | [0.0.5] (https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-1.5)
-| es-1.4        |  0.0.4 | [0.0.4] (https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-1.4)
+| es-2.4.0      |  2.4.0 | [2.4.0](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.4-0)
+| es-2.3.5      |  2.3.5 | [2.3.5](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.3.5)
+| es-2.3.0      |  2.3.0 | [2.3.0](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.3.0)
+| es-2.2.2      |  2.2.2 | [2.2.2](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.2.2)
+| es-2.2.0      |  2.2.0 | [2.2.0](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.2.0)
+| es-2.1.2      |  2.1.2 | [2.1.2](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.1.2)
+| es-2.1.1      |  2.1.1 | [2.1.1](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.1.1)
+| es-1.7		|  0.1.0 | [0.1.0](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-1.7)
+| es-1.5        |  0.0.5 | [0.0.5](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-1.5)
+| es-1.4        |  0.0.4 | [0.0.4](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-1.4)
 
 This can be useful if a stand-alone text analysis engine is available, for instance a UIMA or GATE pipeline, and you would like to transfer the analysis results one to one into the ElasticSearch index.
 For example, a named entity recognizer in the natural language processing (NLP) pipeline might classify ranges of text as being the mention of a company. This kind of logic is typically too complicated for the default use of a Lucene or ElasticSearch analyzer on the one hand, and the recognition engine might not be easily integratable into an analyzer. However, it might be desired to store the named entity mentions - e.g. in the form of a special term 'COMP' - in the index just like one would to with synonyms: With the same offset as the original text and with position increment 0. This would cause highlighting to work as expected: When the term 'COMP' is searched for, all the recognized text ranges would be highlighted by the ElasticSearch built-in highlighting features, just like with synonyms.
