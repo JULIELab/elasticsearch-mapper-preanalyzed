@@ -32,6 +32,7 @@ import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.search.SearchAction;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin;
 import org.elasticsearch.plugins.Plugin;
@@ -41,11 +42,11 @@ import org.junit.Before;
 
 //@ESIntegTestCase.ClusterScope(scope = ESIntegTestCase.Scope.SUITE, numDataNodes = 0)
 public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
-	
-	 @Override
-	    protected Collection<Class<? extends Plugin>> nodePlugins() {
-	        return Collections.<Class<? extends Plugin>>singleton(MapperPreAnalyzedPlugin.class);
-	    }
+
+	@Override
+	protected Collection<Class<? extends Plugin>> nodePlugins() {
+		return Collections.<Class<? extends Plugin>>singleton(MapperPreAnalyzedPlugin.class);
+	}
 
 	@Before
 	public void createEmptyIndex() throws Exception {
@@ -53,6 +54,22 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		internalCluster().wipeIndices("test");
 		createIndex("test");
 	}
+
+	/**
+	 * Check that the analysis conforms to the "keyword" analyzer
+	 * 
+	 * @throws Exception If something goes wrong.
+	 */
+	public void testAnalysis() throws Exception {
+		// note: you must possibly configure your IDE / build system to copy the
+		// test resources into the build folder
+		String mapping = IOUtils.toString(getClass().getResourceAsStream("/simpleMapping.json"), "UTF-8");
+		// Put the preanalyzed mapping
+		client().admin().indices().putMapping(putMappingRequest("test").type("document").source(mapping)).actionGet();
+		assertEquals("Black", client().admin().indices().prepareAnalyze("Black").setIndex("test").setField("title")
+				.execute().get().getTokens().get(0).getTerm());
+	}
+
 
 	@SuppressWarnings("unchecked")
 	public void testSimpleIndex() throws Exception {
@@ -73,7 +90,7 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		assertEquals("with_positions_offsets", titleMapping.get("term_vector"));
 		assertEquals("keyword", titleMapping.get("analyzer"));
 
-		index("test", "document", "1", XContentHelper.convertToJson(docBytes, 0, docBytes.length, false));
+		index("test", "document", "1", XContentHelper.convertToJson(new BytesArray(docBytes), false, false));
 		refresh();
 
 		SearchResponse searchResponse = client().prepareExecute(SearchAction.INSTANCE)
