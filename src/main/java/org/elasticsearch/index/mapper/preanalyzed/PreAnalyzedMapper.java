@@ -37,6 +37,7 @@ import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentParser.Token;
 import org.elasticsearch.common.xcontent.json.JsonXContentParser;
@@ -69,6 +70,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 
 		protected Builder(String name) {
 			super(name, Defaults.FIELD_TYPE, Defaults.FIELD_TYPE);
+			builder = this;
 		}
 
 		@Override
@@ -225,6 +227,18 @@ public class PreAnalyzedMapper extends FieldMapper {
 				fields.add(field);
 			}
 		}
+	}
+	
+	/**
+	 * This is used to send all information about the mapper to places where it
+	 * is used. If we wouldn't overwrite it and add the analyzers, declaring an
+	 * analyzer in the mapping would have no effect despite being set in the
+	 * builder.
+	 */
+	@Override
+	protected void doXContentBody(XContentBuilder builder, boolean includeDefaults, Params params) throws IOException {
+		super.doXContentBody(builder, includeDefaults, params);
+		doXContentAnalyzers(builder, includeDefaults);
 	}
 
 	/**
