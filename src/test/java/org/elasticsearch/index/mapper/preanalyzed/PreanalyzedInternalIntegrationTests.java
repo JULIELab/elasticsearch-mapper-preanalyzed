@@ -130,7 +130,7 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 				.setQuery(queryStringQuery("1877").defaultField("year")).setSize(0).setIndices("test").execute().get();
 		assertEquals(1l, searchResponse.getHits().getTotalHits());
 
-		searchResponse = client().prepareSearch("test").setQuery(matchQuery("title", "Black")).addField("title")
+		searchResponse = client().prepareSearch("test").setQuery(matchQuery("title", "Black")).storedFields("title")
 				.execute().actionGet();
 		assertEquals(1, searchResponse.getHits().getTotalHits());
 		SearchHit searchHit = searchResponse.getHits().getHits()[0];

@@ -46,7 +46,7 @@ import org.elasticsearch.index.mapper.MappedFieldType;
 import org.elasticsearch.index.mapper.Mapper;
 import org.elasticsearch.index.mapper.MapperParsingException;
 import org.elasticsearch.index.mapper.ParseContext;
-import org.elasticsearch.index.mapper.core.TypeParsers;
+import org.elasticsearch.index.mapper.TypeParsers;
 
 import com.fasterxml.jackson.core.JsonFactory;
 
@@ -142,7 +142,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 
 	}
 
-	public static final class PreanalyzedFieldType extends MappedFieldType {
+	public static final class PreanalyzedFieldType extends org.elasticsearch.index.mapper.StringFieldType {
 
 		public PreanalyzedFieldType() {
 		}
@@ -170,7 +170,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 	 */
 	private FieldType fieldTypeText;
 	private MappedFieldType fieldTypeIndexed;
-	private final static JsonFactory jsonFactory;
+	private static final JsonFactory jsonFactory;
 
 	static {
 		jsonFactory = new JsonFactory();
@@ -195,8 +195,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 			try {
 				valueAndTokenStream = parsePreAnalyzedFieldContents(parser);
 			} catch (MapperParsingException e) {
-				throw new MapperParsingException("Could not read preanalyzed field value of document " + context.id(),
-						e);
+				throw new MapperParsingException("Could not read preanalyzed field value of document", e);
 			}
 
 			// We actually create two fields: First, a TokenStream (cannot be
@@ -211,7 +210,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 				TokenStream ts = valueAndTokenStream.v2();
 
 				if (ts != null) {
-					Field field = new Field(fieldTypeIndexed.names().indexName(), ts, fieldTypeIndexed);
+					Field field = new Field(fieldTypeIndexed.name(), ts, fieldTypeIndexed);
 					fields.add(field);
 				}
 			}
@@ -220,9 +219,9 @@ public class PreAnalyzedMapper extends FieldMapper {
 			if (fieldTypeText.stored() && null != storedValue.value) {
 				Field field;
 				if (PreAnalyzedStoredValue.VALUE_TYPE.STRING == storedValue.type) {
-					field = new Field(fieldType().names().indexName(), (String) storedValue.value, fieldTypeText);
+					field = new Field(fieldType().name(), (String) storedValue.value, fieldTypeText);
 				} else {
-					field = new Field(fieldType().names().indexName(), (BytesRef) storedValue.value, fieldTypeText);
+					field = new Field(fieldType().name(), (BytesRef) storedValue.value, fieldTypeText);
 				}
 				fields.add(field);
 			}
@@ -255,7 +254,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 	private Tuple<PreAnalyzedStoredValue, TokenStream> parsePreAnalyzedFieldContents(XContentParser parser) {
 		try {
 
-			Token currentToken = parser.currentToken();
+			Token currentToken;
 			String currentFieldName = "";
 			String version = null;
 			PreAnalyzedStoredValue storedValue = new PreAnalyzedStoredValue();
@@ -284,14 +283,14 @@ public class PreAnalyzedMapper extends FieldMapper {
 
 			if (null == version) {
 				throw new MapperParsingException("No version of pre-analyzed field format has been specified for field "
-						+ fieldType().names().fullName());
+						+ fieldType().name());
 			}
 
 			return new Tuple<PreAnalyzedStoredValue, TokenStream>(storedValue, ts);
 		} catch (IOException e) {
 			throw new MapperParsingException(
 					"The input document could not be parsed as a preanalyzed field value for field "
-							+ fieldType().names().fullName() + ".",
+							+ fieldType().name() + ".",
 					e);
 		}
 	}
@@ -389,10 +388,8 @@ public class PreAnalyzedMapper extends FieldMapper {
 					}
 				}
 
-				// if (-1 != start && -1 != end) {
 				tokenMap.put("s", start != -1 ? start : 0);
 				tokenMap.put("e", end != -1 ? end : 0);
-				// }
 
 				if (!termFound) {
 					throw new IllegalArgumentException(
@@ -456,7 +453,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 		}
 	}
 
-	static private class PreAnalyzedStoredValue {
+	private static class PreAnalyzedStoredValue {
 		Object value;
 		VALUE_TYPE type;
 

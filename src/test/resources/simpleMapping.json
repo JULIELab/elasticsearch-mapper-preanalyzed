@@ -8,8 +8,9 @@
           		"type": "preanalyzed"
             },
             "author":{
-            	"type":"string"
-            }
+            	"type":"text",
+            	"analyzer" : "whitespace"
+			}
         }
     }
 }
