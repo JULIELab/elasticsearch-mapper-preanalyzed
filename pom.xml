@@ -4,13 +4,13 @@
 	<groupId>de.julielab</groupId>
 	<artifactId>elasticsearch-mapper-preanalyzed</artifactId>
 	<name>Plugin: Mapper: Preanalyzed</name>
-	<version>5.4.3</version>
+	<version>5.5.0</version>
 	<properties>
 		<elasticsearch.plugin.classname>org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin</elasticsearch.plugin.classname>
 		<skip.integ.tests>true</skip.integ.tests>
-		<elasticsearch.version>5.4.3</elasticsearch.version>
-		<elasticsearch.rest.version>5.4.3</elasticsearch.rest.version>
-		<lucene.version>6.5.1</lucene.version>
+		<elasticsearch.version>5.5.0</elasticsearch.version>
+		<elasticsearch.rest.version>5.5.0</elasticsearch.rest.version>
+		<lucene.version>6.6.0</lucene.version>
 	</properties>
 	
 	<build>
