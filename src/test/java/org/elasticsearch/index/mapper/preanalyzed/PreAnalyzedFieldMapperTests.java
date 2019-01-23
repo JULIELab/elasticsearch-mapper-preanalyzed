@@ -70,7 +70,8 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 		typeParsers.put(PreAnalyzedMapper.CONTENT_TYPE,
 						new PreAnalyzedMapper.TypeParser());
 		typeParsers.put("text", new TextFieldMapper.TypeParser());
-		mapperRegistry = new MapperRegistry(typeParsers, Collections.<String, MetadataFieldMapper.TypeParser> emptyMap());
+		java.util.function.Function<java.lang.String,java.util.function.Predicate<java.lang.String>> filter = (String a) -> {return (b)-> true;};
+		mapperRegistry = new MapperRegistry(typeParsers, Collections.<String, MetadataFieldMapper.TypeParser> emptyMap(), filter);
 		parser = new DocumentMapperParser(indexService.getIndexSettings(), indexService.mapperService(),
 				indexService.getIndexAnalyzers(), null, indexService.similarityService(), mapperRegistry, null);
 	}
