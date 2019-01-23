@@ -34,6 +34,7 @@ import org.elasticsearch.action.search.SearchAction;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.xcontent.XContentHelper;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.search.SearchHit;
@@ -65,7 +66,7 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		// test resources into the build folder
 		String mapping = IOUtils.toString(getClass().getResourceAsStream("/simpleMapping.json"), "UTF-8");
 		// Put the preanalyzed mapping
-		client().admin().indices().putMapping(putMappingRequest("test").type("document").source(mapping)).actionGet();
+		client().admin().indices().putMapping(putMappingRequest("test").type("document").source(mapping, XContentType.JSON)).actionGet();
 		assertEquals("Black", client().admin().indices().prepareAnalyze("Black").setIndex("test").setField("title")
 				.execute().get().getTokens().get(0).getTerm());
 	}
@@ -77,7 +78,7 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
 
 		// Put the preanalyzed mapping check that it is there indeed
-		client().admin().indices().putMapping(putMappingRequest("test").type("document").source(mapping)).actionGet();
+		client().admin().indices().putMapping(putMappingRequest("test").type("document").source(mapping, XContentType.JSON)).actionGet();
 		GetMappingsResponse actionGet =
 				client().admin().indices().getMappings(new GetMappingsRequest().indices("test")).get();
 		Map<String, Object> mappingProperties =
@@ -90,7 +91,7 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		assertEquals("with_positions_offsets", titleMapping.get("term_vector"));
 		assertEquals("keyword", titleMapping.get("analyzer"));
 
-		index("test", "document", "1", XContentHelper.convertToJson(new BytesArray(docBytes), false, false));
+		index("test", "document", "1", XContentHelper.convertToJson(new BytesArray(docBytes), false, false, XContentType.JSON));
 		refresh();
 
 		SearchResponse searchResponse = client().prepareExecute(SearchAction.INSTANCE)
@@ -135,6 +136,6 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		assertEquals(1, searchResponse.getHits().getTotalHits());
 		SearchHit searchHit = searchResponse.getHits().getHits()[0];
 		
-		assertTrue(((String) searchHit.field("title").value()).startsWith("Black Beauty"));
+		assertTrue(((String) searchHit.getField("title").getValue()).startsWith("Black Beauty"));
 	}
 }
