@@ -3,7 +3,7 @@
         "properties":{
             "title":{
                 "analyzer": "keyword",
-          		"store": "yes",
+          		"store": true,
           		"term_vector": "with_positions_offsets",
           		"type": "preanalyzed",
           		"copy_to":"title_copy"
@@ -12,9 +12,8 @@
             	"type" : "preanalyzed"
             },
             "author":{
-            	"type":"text",
-            	"analyzer" : "whitespace"
-			}
+            	"type":"text"
+            }
         }
     }
 }

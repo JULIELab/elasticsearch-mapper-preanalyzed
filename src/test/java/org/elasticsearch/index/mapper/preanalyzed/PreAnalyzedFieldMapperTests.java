@@ -25,7 +25,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
 import java.util.Base64;
 
 import org.apache.commons.io.IOUtils;
@@ -41,9 +40,10 @@ import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.IndexableFieldType;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.compress.CompressedXContent;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.IndexService;
 import org.elasticsearch.index.mapper.DocumentMapper;
 import org.elasticsearch.index.mapper.DocumentMapperParser;
@@ -52,7 +52,6 @@ import org.elasticsearch.index.mapper.MetadataFieldMapper;
 import org.elasticsearch.index.mapper.ParseContext.Document;
 import org.elasticsearch.index.mapper.TextFieldMapper;
 import org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper.PreAnalyzedTokenStream;
-import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.indices.mapper.MapperRegistry;
 import org.elasticsearch.test.ESSingleNodeTestCase;
 import org.junit.Before;
@@ -71,9 +70,8 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 						new PreAnalyzedMapper.TypeParser());
 		typeParsers.put("text", new TextFieldMapper.TypeParser());
 		mapperRegistry = new MapperRegistry(typeParsers, Collections.<String, MetadataFieldMapper.TypeParser> emptyMap());
-		Supplier<QueryShardContext> context = ()->{return indexService.newQueryShardContext();};
 		parser = new DocumentMapperParser(indexService.getIndexSettings(), indexService.mapperService(),
-				indexService.analysisService(), indexService.similarityService(), mapperRegistry, context);
+				indexService.getIndexAnalyzers(), null, indexService.similarityService(), mapperRegistry, null);
 	}
 
 	public void testSimple() throws Exception {
@@ -234,7 +232,8 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 		tsBuilder.startObject().field("t", "testterm4").field("p", Base64.getEncoder().encodeToString("my payload".getBytes(StandardCharsets.UTF_8)))
 		.field("y", "testtype").field("f", "0x4").endObject();
 		tsBuilder.endArray().endObject();
-		XContentParser parser = XContentHelper.createParser(tsBuilder.bytes());
+		XContentType xContentType = XContentType.JSON;
+		XContentParser parser = xContentType.xContent().createParser(NamedXContentRegistry.EMPTY, tsBuilder.bytes());
 		parser.nextToken(); // begin object
 		parser.nextToken();
 		assertEquals(XContentParser.Token.FIELD_NAME, parser.currentToken()); // "v"

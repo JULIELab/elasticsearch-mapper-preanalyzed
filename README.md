@@ -7,6 +7,11 @@ ElasticSearch compatibility table:
 
 | elasticsearch |  Preanalyzed Mapper Plugin | Docs
 |---------------|----------------------------|------
+| es-5.3.3      |  5.3.3 | [5.3.3-mvn](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-5.3.3-mvn)
+| es-5.3.2      |  5.3.2 | [5.3.2](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-5.3.2)
+| es-5.3.1      |  5.3.1 | [5.3.1](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-5.3.1)
+| es-5.3.0      |  5.3.0 | [5.3.0](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-5.3.0)
+| es-5.2.2      |  5.2.2 | [5.2.2](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-5.2.2)
 | es-5.0.2      |  5.0.2 | [5.0.2](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-5.0.2)
 | es-5.0.0      |  5.0.0 | [5.0.0](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-5.0.0)
 | es-2.4.6      |  2.4.6 | [2.4.6](https://github.com/JULIELab/elasticsearch-mapper-preanalyzed/tree/es-2.4.6)

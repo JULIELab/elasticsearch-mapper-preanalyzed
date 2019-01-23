@@ -34,6 +34,7 @@ import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.IndexOptions;
+import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Settings;
@@ -185,12 +186,12 @@ public class PreAnalyzedMapper extends FieldMapper {
 	}
 
 	@Override
-	protected void parseCreateField(ParseContext context, List<Field> fields) throws IOException {
+	protected void parseCreateField(ParseContext context, List<IndexableField> fields) throws IOException {
 		String preAnalyzedJson = context.parser().textOrNull();
 		if (null == preAnalyzedJson)
 			return;
 
-		try (XContentParser parser = new JsonXContentParser(jsonFactory.createParser(preAnalyzedJson))) {
+		try (XContentParser parser = new JsonXContentParser(null, jsonFactory.createParser(preAnalyzedJson))) {
 			Tuple<PreAnalyzedStoredValue, TokenStream> valueAndTokenStream;
 			try {
 				valueAndTokenStream = parsePreAnalyzedFieldContents(parser);
