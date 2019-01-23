@@ -136,6 +136,6 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		assertEquals(1, searchResponse.getHits().getTotalHits());
 		SearchHit searchHit = searchResponse.getHits().getHits()[0];
 		
-		assertTrue(((String) searchHit.getField("title").getValue()).startsWith("Black Beauty"));
+		assertTrue(((String) searchHit.field("title").getValue()).startsWith("Black Beauty"));
 	}
 }

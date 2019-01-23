@@ -50,6 +50,7 @@ import org.elasticsearch.index.mapper.DocumentMapperParser;
 import org.elasticsearch.index.mapper.Mapper;
 import org.elasticsearch.index.mapper.MetadataFieldMapper;
 import org.elasticsearch.index.mapper.ParseContext.Document;
+import org.elasticsearch.index.mapper.SourceToParse;
 import org.elasticsearch.index.mapper.TextFieldMapper;
 import org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper.PreAnalyzedTokenStream;
 import org.elasticsearch.indices.mapper.MapperRegistry;
@@ -78,7 +79,7 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 		String mapping = IOUtils.toString(getClass().getResourceAsStream("/simpleMapping.json"), "UTF-8");
 		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
 		DocumentMapper docMapper = parser.parse(null, new CompressedXContent(mapping));
-		Document doc = docMapper.parse("test", "document", "1", new BytesArray(docBytes)).rootDoc();
+		Document doc = docMapper.parse(SourceToParse.source("test", "document", "1", new BytesArray(docBytes), XContentType.JSON)).rootDoc();
 
 		// Check field: "author"
 		IndexableField field = doc.getField("author");
@@ -121,7 +122,7 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 		String mapping = IOUtils.toString(getClass().getResourceAsStream("/copyToMapping.json"), "UTF-8");
 		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
 		DocumentMapper docMapper = parser.parse(null, new CompressedXContent(mapping));
-		Document doc = docMapper.parse("test", "document", "1", new BytesArray(docBytes)).rootDoc();
+		Document doc = docMapper.parse(SourceToParse.source("test", "document", "1", new BytesArray(docBytes), XContentType.JSON)).rootDoc();
 
 		// Check field: "author"
 		IndexableField field = doc.getField("author");
