@@ -206,7 +206,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 		if (null == preAnalyzedJson)
 			return;
 
-		try (XContentParser parser = new JsonXContentParser(null, jsonFactory.createParser(preAnalyzedJson))) {
+		try (XContentParser parser = new JsonXContentParser(null, new NoopDeprecationHandler(), jsonFactory.createParser(preAnalyzedJson))) {
 			Tuple<PreAnalyzedStoredValue, TokenStream> valueAndTokenStream;
 			try {
 				valueAndTokenStream = parsePreAnalyzedFieldContents(parser);
@@ -383,9 +383,10 @@ public class PreAnalyzedMapper extends FieldMapper {
 							// zeros, which can cause problems with Base64
 							// encoding. All we do is trim the byte array to
 							// its actual length.
-							BytesRef inputBytes = parser.utf8Bytes();
-							byte[] byteArray = new byte[inputBytes.length];
-							System.arraycopy(inputBytes.bytes, 0, byteArray, 0, inputBytes.length);
+//							BytesRef inputBytes = parser.utf8Bytes();
+//							byte[] byteArray = new byte[inputBytes.length];
+//							System.arraycopy(inputBytes.bytes, 0, byteArray, 0, inputBytes.length);
+							byte[] byteArray = parser.charBuffer().toString().getBytes("UTF-8");
 							BytesRef bytesRef = new BytesRef(byteArray);
 							tokenMap.put("p", bytesRef);
 						} else if ("f".equals(currentFieldName)) {

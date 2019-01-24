@@ -4,13 +4,13 @@
 	<groupId>de.julielab</groupId>
 	<artifactId>elasticsearch-mapper-preanalyzed</artifactId>
 	<name>Plugin: Mapper: Preanalyzed</name>
-	<version>6.2.4</version>
+	<version>6.5.0</version>
 	<properties>
 		<elasticsearch.plugin.classname>org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin</elasticsearch.plugin.classname>
 		<skip.integ.tests>true</skip.integ.tests>
-		<elasticsearch.version>6.2.4</elasticsearch.version>
-		<elasticsearch.rest.version>6.2.4</elasticsearch.rest.version>
-		<lucene.version>7.2.1</lucene.version>
+		<elasticsearch.version>6.5.0</elasticsearch.version>
+		<elasticsearch.rest.version>6.5.0</elasticsearch.rest.version>
+		<lucene.version>7.5.0</lucene.version>
 	</properties>
 	
 	<build>
@@ -120,13 +120,13 @@
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-api</artifactId>
-			<version>2.9.1</version>
+			<version>2.11.1</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-core</artifactId>
-			<version>2.9.1</version>
+			<version>2.11.1</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

@@ -21,6 +21,8 @@ package org.elasticsearch.index.mapper.preanalyzed;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,6 +40,7 @@ import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.IndexableFieldType;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.compress.CompressedXContent;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
@@ -235,7 +238,7 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 		.field("y", "testtype").field("f", "0x4").endObject();
 		tsBuilder.endArray().endObject();
 		XContentType xContentType = XContentType.JSON;
-		XContentParser parser = xContentType.xContent().createParser(NamedXContentRegistry.EMPTY, tsBuilder.bytes());
+		XContentParser parser = xContentType.xContent().createParser(NamedXContentRegistry.EMPTY, new NoopDeprecationHandler(), Strings.toString(tsBuilder));
 		parser.nextToken(); // begin object
 		parser.nextToken();
 		assertEquals(XContentParser.Token.FIELD_NAME, parser.currentToken()); // "v"
