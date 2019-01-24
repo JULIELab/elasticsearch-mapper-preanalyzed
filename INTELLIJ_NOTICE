@@ -1,5 +1,0 @@
-To avoid the "jar hell" error when running the tests, IntelliJ users will have to disable the IntelliJ run launcher:
-* add the line '-Didea.no.launcher=true' in the manner described here: https://stackoverflow.com/questions/13578062/how-to-increase-ide-memory-limit-in-intellij-idea-on-mac/13581526#13581526
-And remove the 'ant-javafx.jar' library from the default project classpath (File -> Project Structure -> SDKs).
-
-For more troubleshooting see https://github.com/elastic/elasticsearch/blob/master/CONTRIBUTING.md#configuring-ides-and-running-tests

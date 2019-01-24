@@ -32,7 +32,4 @@ public class MapperPreAnalyzedPlugin extends Plugin implements MapperPlugin {
 	public Map<String, TypeParser> getMappers() {
 		return Collections.singletonMap("preanalyzed", new PreAnalyzedMapper.TypeParser());
 	}
-
-	
-
 }

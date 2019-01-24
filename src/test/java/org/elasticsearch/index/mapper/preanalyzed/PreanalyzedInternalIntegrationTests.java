@@ -18,6 +18,15 @@
  */
 package org.elasticsearch.index.mapper.preanalyzed;
 
+import static org.elasticsearch.client.Requests.putMappingRequest;
+import static org.elasticsearch.index.query.QueryBuilders.matchPhraseQuery;
+import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
+import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+
 import org.apache.commons.io.IOUtils;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
@@ -31,13 +40,6 @@ import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.ESIntegTestCase;
 import org.junit.Before;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-
-import static org.elasticsearch.client.Requests.putMappingRequest;
-import static org.elasticsearch.index.query.QueryBuilders.*;
 
 //@ESIntegTestCase.ClusterScope(scope = ESIntegTestCase.Scope.SUITE, numDataNodes = 0)
 public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
@@ -69,19 +71,19 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 				.execute().get().getTokens().get(0).getTerm());
 	}
 
+
 	@SuppressWarnings("unchecked")
 	public void testSimpleIndex() throws Exception {
-		// note: you must possibly configure your IDE / build system to copy the
-		// test resources into the build folder
 		String mapping = IOUtils.toString(getClass().getResourceAsStream("/simpleMapping.json"), "UTF-8");
 		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
 
 		// Put the preanalyzed mapping check that it is there indeed
 		client().admin().indices().putMapping(putMappingRequest("test").type("document").source(mapping, XContentType.JSON)).actionGet();
-		GetMappingsResponse actionGet = client().admin().indices().getMappings(new GetMappingsRequest().indices("test"))
-				.get();
-		Map<String, Object> mappingProperties = (Map<String, Object>) actionGet.getMappings().get("test")
-				.get("document").getSourceAsMap().get("properties");
+		GetMappingsResponse actionGet =
+				client().admin().indices().getMappings(new GetMappingsRequest().indices("test")).get();
+		Map<String, Object> mappingProperties =
+				(Map<String, Object>) actionGet.getMappings().get("test").get("document").getSourceAsMap()
+						.get("properties");
 		assertTrue(mappingProperties.keySet().contains("title"));
 		Map<String, Object> titleMapping = (Map<String, Object>) mappingProperties.get("title");
 		assertEquals("preanalyzed", titleMapping.get("type"));
@@ -89,7 +91,7 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		assertEquals("with_positions_offsets", titleMapping.get("term_vector"));
 		assertEquals("keyword", titleMapping.get("analyzer"));
 
-		index("test", "document", "1", XContentHelper.convertToJson(new BytesArray(docBytes), false, XContentType.JSON));
+		index("test", "document", "1", XContentHelper.convertToJson(new BytesArray(docBytes), false, false, XContentType.JSON));
 		refresh();
 
 		SearchResponse searchResponse = client().prepareExecute(SearchAction.INSTANCE)
@@ -133,6 +135,7 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 				.execute().actionGet();
 		assertEquals(1, searchResponse.getHits().getTotalHits());
 		SearchHit searchHit = searchResponse.getHits().getHits()[0];
+		
 		assertTrue(((String) searchHit.field("title").getValue()).startsWith("Black Beauty"));
 	}
 }

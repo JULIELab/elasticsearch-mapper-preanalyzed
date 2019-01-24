@@ -18,50 +18,66 @@
  */
 package org.elasticsearch.index.mapper.preanalyzed;
 
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Base64;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.tokenattributes.*;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.analysis.tokenattributes.FlagsAttribute;
+import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
+import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
+import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.IndexableFieldType;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.compress.CompressedXContent;
-import org.elasticsearch.common.xcontent.*;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentParser;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.IndexService;
-import org.elasticsearch.index.mapper.*;
+import org.elasticsearch.index.mapper.DocumentMapper;
+import org.elasticsearch.index.mapper.DocumentMapperParser;
+import org.elasticsearch.index.mapper.Mapper;
+import org.elasticsearch.index.mapper.MetadataFieldMapper;
 import org.elasticsearch.index.mapper.ParseContext.Document;
+import org.elasticsearch.index.mapper.SourceToParse;
+import org.elasticsearch.index.mapper.TextFieldMapper;
 import org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper.PreAnalyzedTokenStream;
 import org.elasticsearch.indices.mapper.MapperRegistry;
 import org.elasticsearch.test.ESSingleNodeTestCase;
 import org.junit.Before;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
-
 public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 
-	private DocumentMapperParser parser;
+	MapperRegistry mapperRegistry;
+	IndexService indexService;
+	DocumentMapperParser parser;
 
 	@Before
 	public void setup() {
-		IndexService indexService = createIndex("test");
+		indexService = createIndex("test");
 		Map<String, Mapper.TypeParser> typeParsers = new HashMap<>();
 		typeParsers.put(PreAnalyzedMapper.CONTENT_TYPE,
 						new PreAnalyzedMapper.TypeParser());
 		typeParsers.put("text", new TextFieldMapper.TypeParser());
-		MapperRegistry mapperRegistry = new MapperRegistry(typeParsers, Collections.emptyMap());
+		java.util.function.Function<java.lang.String,java.util.function.Predicate<java.lang.String>> filter = (String a) -> {return (b)-> true;};
+		mapperRegistry = new MapperRegistry(typeParsers, Collections.<String, MetadataFieldMapper.TypeParser> emptyMap(), filter);
 		parser = new DocumentMapperParser(indexService.getIndexSettings(), indexService.mapperService(),
 				indexService.getIndexAnalyzers(), null, indexService.similarityService(), mapperRegistry, null);
 	}
 
 	public void testSimple() throws Exception {
-		// note: you must possibly configure your IDE / build system to copy the test resources into the build folder
 		String mapping = IOUtils.toString(getClass().getResourceAsStream("/simpleMapping.json"), "UTF-8");
 		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
 		DocumentMapper docMapper = parser.parse(null, new CompressedXContent(mapping));
@@ -105,7 +121,6 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 	}
 	
 	public void testCopyField() throws Exception {
-		// note: you must possibly configure your IDE / build system to copy the test resources into the build folder
 		String mapping = IOUtils.toString(getClass().getResourceAsStream("/copyToMapping.json"), "UTF-8");
 		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
 		DocumentMapper docMapper = parser.parse(null, new CompressedXContent(mapping));
@@ -218,10 +233,10 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 		tsBuilder.startObject().field("t", "testterm2").field("s", 1).field("e", 8).field("i", 0).endObject();
 		tsBuilder.startObject().field("t", "testterm3").field("s", 9).field("e", 15).endObject();
 		tsBuilder.startObject().field("t", "testterm4").field("p", Base64.getEncoder().encodeToString("my payload".getBytes(StandardCharsets.UTF_8)))
-				.field("y", "testtype").field("f", "0x4").endObject();
-		
+		.field("y", "testtype").field("f", "0x4").endObject();
 		tsBuilder.endArray().endObject();
-		XContentParser parser = XContentHelper.createParser(NamedXContentRegistry.EMPTY, tsBuilder.bytes(), XContentType.JSON);
+		XContentType xContentType = XContentType.JSON;
+		XContentParser parser = xContentType.xContent().createParser(NamedXContentRegistry.EMPTY, new NoopDeprecationHandler(), Strings.toString(tsBuilder));
 		parser.nextToken(); // begin object
 		parser.nextToken();
 		assertEquals(XContentParser.Token.FIELD_NAME, parser.currentToken()); // "v"

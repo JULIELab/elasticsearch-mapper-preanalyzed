@@ -2,7 +2,6 @@
     "document":{
         "properties":{
             "title":{
-            	"search_analyzer": "keyword",
                 "analyzer": "keyword",
           		"store": true,
           		"term_vector": "with_positions_offsets",
@@ -11,7 +10,7 @@
             "author":{
             	"type":"text",
             	"analyzer" : "whitespace"
-            }
+			}
         }
     }
 }
