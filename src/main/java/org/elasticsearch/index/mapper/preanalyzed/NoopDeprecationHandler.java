@@ -16,4 +16,10 @@ public class NoopDeprecationHandler implements DeprecationHandler {
 
 	}
 
+	@Override
+	public void deprecated(String message, Object... params) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }
