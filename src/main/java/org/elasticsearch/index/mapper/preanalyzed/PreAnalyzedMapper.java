@@ -153,12 +153,19 @@ public class PreAnalyzedMapper extends FieldMapper {
         }
 
         public PreanalyzedFieldType(PreanalyzedFieldType preanalyzedFieldType) {
-            this(preanalyzedFieldType.delegateType);
+            super(preanalyzedFieldType);
+            this.delegateType = preanalyzedFieldType.delegateType;
         }
 
         @Override
         public PreanalyzedFieldType clone() {
             return new PreanalyzedFieldType(this);
+        }
+
+        @Override
+        public void setName(String name) {
+            super.setName(name);
+            delegateType.setName(name);
         }
 
         @Override
