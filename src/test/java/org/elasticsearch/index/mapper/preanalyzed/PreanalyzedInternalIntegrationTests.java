@@ -40,6 +40,8 @@ import org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.ESIntegTestCase;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 
 //@ESIntegTestCase.ClusterScope(scope = ESIntegTestCase.Scope.SUITE, numDataNodes = 0)
@@ -56,6 +58,11 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		internalCluster().wipeIndices("test");
 		createIndex("test");
 	}
+
+	@AfterClass
+    public static void shutDown() {
+	    client().close();
+    }
 
 	/**
 	 * Check that the analysis conforms to the "keyword" analyzer
