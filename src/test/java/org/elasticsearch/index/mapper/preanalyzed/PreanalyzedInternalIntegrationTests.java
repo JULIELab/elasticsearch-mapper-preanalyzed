@@ -98,12 +98,12 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		SearchResponse searchResponse = client().prepareSearch("test")
 				.setQuery(queryStringQuery("Black").defaultField("title")).setSize(0).setIndices("test").execute()
 				.get();
-		assertEquals(1l, searchResponse.getHits().getTotalHits());
+		assertEquals(1l, searchResponse.getHits().getTotalHits().value);
 
 		searchResponse = client().prepareSearch("test")
 				.setQuery(queryStringQuery("black").defaultField("title")).setSize(0).setIndices("test").execute()
 				.get();
-		assertEquals(0l, searchResponse.getHits().getTotalHits());
+		assertEquals(0l, searchResponse.getHits().getTotalHits().value);
 
 		// actually, 'Black' and 'hero' are "on top of each other", 'hero' has a
 		// position increment of 0 and comes after
@@ -111,30 +111,30 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		searchResponse = client().prepareSearch("test")
 				.setQuery(matchPhraseQuery("title", "Black hero").analyzer("whitespace").slop(1)).setSize(0)
 				.setIndices("test").execute().get();
-		assertEquals(1l, searchResponse.getHits().getTotalHits());
+		assertEquals(1l, searchResponse.getHits().getTotalHits().value);
 
 		searchResponse = client().prepareSearch("test")
 				.setQuery(matchPhraseQuery("title", "Beauty hero").analyzer("whitespace").slop(0)).setSize(0)
 				.setIndices("test").execute().get();
-		assertEquals(0l, searchResponse.getHits().getTotalHits());
+		assertEquals(0l, searchResponse.getHits().getTotalHits().value);
 
 		searchResponse = client().prepareSearch("test")
 				.setQuery(matchPhraseQuery("title", "Beauty hero").analyzer("whitespace").slop(3)).setSize(0)
 				.setIndices("test").execute().get();
-		assertEquals(1l, searchResponse.getHits().getTotalHits());
+		assertEquals(1l, searchResponse.getHits().getTotalHits().value);
 
 		searchResponse = client().prepareSearch("test")
 				.setQuery(queryStringQuery("Anne Sewell").defaultField("author")).setSize(0).setIndices("test")
 				.execute().get();
-		assertEquals(1l, searchResponse.getHits().getTotalHits());
+		assertEquals(1l, searchResponse.getHits().getTotalHits().value);
 
 		searchResponse = client().prepareSearch("test")
 				.setQuery(queryStringQuery("1877").defaultField("year")).setSize(0).setIndices("test").execute().get();
-		assertEquals(1l, searchResponse.getHits().getTotalHits());
+		assertEquals(1l, searchResponse.getHits().getTotalHits().value);
 
 		searchResponse = client().prepareSearch("test").setQuery(matchQuery("title", "Black")).storedFields("title")
 				.execute().actionGet();
-		assertEquals(1, searchResponse.getHits().getTotalHits());
+		assertEquals(1, searchResponse.getHits().getTotalHits().value);
 		SearchHit searchHit = searchResponse.getHits().getHits()[0];
 		
 		assertTrue(((String) searchHit.field("title").getValue()).startsWith("Black Beauty"));
