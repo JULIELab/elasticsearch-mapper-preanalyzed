@@ -261,7 +261,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 	 * specified by the Solr JSON PreAnalyzed field type. The format
 	 * specification can be found at the link below.
 	 * 
-	 * @param xContentParser
+	 * @param parser The parser for the input document to be indexed.
 	 * @return A tuple, containing the plain text value and a TokenStream with
 	 *         the pre-analyzed tokens.
 	 * @see <a href="http://wiki.apache.org/solr/JsonPreAnalyzedParser">http://

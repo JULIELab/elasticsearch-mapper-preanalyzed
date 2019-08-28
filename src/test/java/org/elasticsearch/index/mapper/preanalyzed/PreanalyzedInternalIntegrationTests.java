@@ -31,6 +31,7 @@ import org.apache.commons.io.IOUtils;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.search.SearchAction;
+import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.xcontent.XContentHelper;
@@ -94,12 +95,12 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		index("test", "document", "1", XContentHelper.convertToJson(new BytesArray(docBytes), false, false, XContentType.JSON));
 		refresh();
 
-		SearchResponse searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+		SearchResponse searchResponse = client().prepareSearch("test")
 				.setQuery(queryStringQuery("Black").defaultField("title")).setSize(0).setIndices("test").execute()
 				.get();
 		assertEquals(1l, searchResponse.getHits().getTotalHits());
 
-		searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+		searchResponse = client().prepareSearch("test")
 				.setQuery(queryStringQuery("black").defaultField("title")).setSize(0).setIndices("test").execute()
 				.get();
 		assertEquals(0l, searchResponse.getHits().getTotalHits());
@@ -107,27 +108,27 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 		// actually, 'Black' and 'hero' are "on top of each other", 'hero' has a
 		// position increment of 0 and comes after
 		// 'Black'. we need to set a phrase slop to allow a match.
-		searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+		searchResponse = client().prepareSearch("test")
 				.setQuery(matchPhraseQuery("title", "Black hero").analyzer("whitespace").slop(1)).setSize(0)
 				.setIndices("test").execute().get();
 		assertEquals(1l, searchResponse.getHits().getTotalHits());
 
-		searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+		searchResponse = client().prepareSearch("test")
 				.setQuery(matchPhraseQuery("title", "Beauty hero").analyzer("whitespace").slop(0)).setSize(0)
 				.setIndices("test").execute().get();
 		assertEquals(0l, searchResponse.getHits().getTotalHits());
 
-		searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+		searchResponse = client().prepareSearch("test")
 				.setQuery(matchPhraseQuery("title", "Beauty hero").analyzer("whitespace").slop(3)).setSize(0)
 				.setIndices("test").execute().get();
 		assertEquals(1l, searchResponse.getHits().getTotalHits());
 
-		searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+		searchResponse = client().prepareSearch("test")
 				.setQuery(queryStringQuery("Anne Sewell").defaultField("author")).setSize(0).setIndices("test")
 				.execute().get();
 		assertEquals(1l, searchResponse.getHits().getTotalHits());
 
-		searchResponse = client().prepareExecute(SearchAction.INSTANCE)
+		searchResponse = client().prepareSearch("test")
 				.setQuery(queryStringQuery("1877").defaultField("year")).setSize(0).setIndices("test").execute().get();
 		assertEquals(1l, searchResponse.getHits().getTotalHits());
 
