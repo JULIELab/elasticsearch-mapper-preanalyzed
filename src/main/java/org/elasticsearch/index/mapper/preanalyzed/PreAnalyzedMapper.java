@@ -18,44 +18,40 @@
  */
 package org.elasticsearch.index.mapper.preanalyzed;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.fasterxml.jackson.core.JsonFactory;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.AnalyzerWrapper;
+import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.analysis.tokenattributes.FlagsAttribute;
-import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
-import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
-import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
+import org.apache.lucene.analysis.ngram.EdgeNGramTokenFilter;
+import org.apache.lucene.analysis.tokenattributes.*;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.search.NormsFieldExistsQuery;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.*;
+import org.apache.lucene.search.intervals.IntervalsSource;
+import org.apache.lucene.search.spans.SpanMultiTermQueryWrapper;
+import org.apache.lucene.search.spans.SpanQuery;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.automaton.Automata;
+import org.apache.lucene.util.automaton.Automaton;
+import org.apache.lucene.util.automaton.Operations;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentParser.Token;
 import org.elasticsearch.common.xcontent.json.JsonXContentParser;
-import org.elasticsearch.index.mapper.FieldMapper;
-import org.elasticsearch.index.mapper.FieldNamesFieldMapper;
-import org.elasticsearch.index.mapper.MappedFieldType;
-import org.elasticsearch.index.mapper.Mapper;
-import org.elasticsearch.index.mapper.MapperParsingException;
-import org.elasticsearch.index.mapper.ParseContext;
-import org.elasticsearch.index.mapper.TypeParsers;
+import org.elasticsearch.index.analysis.AnalyzerScope;
+import org.elasticsearch.index.analysis.NamedAnalyzer;
+import org.elasticsearch.index.fielddata.IndexFieldData;
+import org.elasticsearch.index.mapper.*;
 import org.elasticsearch.index.query.QueryShardContext;
 
-import com.fasterxml.jackson.core.JsonFactory;
+import java.io.IOException;
+import java.util.*;
 
 public class PreAnalyzedMapper extends FieldMapper {
 
@@ -63,7 +59,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 
 	public static class Defaults {
 
-		public static final MappedFieldType FIELD_TYPE = new PreanalyzedFieldType();
+		public static final MappedFieldType FIELD_TYPE = new PreanalyzedFieldType(new TextFieldMapper.TextFieldType());
 
 		static {
 			FIELD_TYPE.freeze();
@@ -150,34 +146,125 @@ public class PreAnalyzedMapper extends FieldMapper {
 	}
 
 	public static final class PreanalyzedFieldType extends org.elasticsearch.index.mapper.StringFieldType {
+            private TextFieldMapper.TextFieldType delegateType;
 
-		public PreanalyzedFieldType() {
-		}
+        public PreanalyzedFieldType(TextFieldMapper.TextFieldType delegateType) {
+            this.delegateType = delegateType;
+        }
 
-		public PreanalyzedFieldType(PreanalyzedFieldType ref) {
-			super(ref);
-		}
+        public PreanalyzedFieldType(PreanalyzedFieldType preanalyzedFieldType) {
+            super(preanalyzedFieldType);
+            this.delegateType = preanalyzedFieldType.delegateType;
+        }
 
-		@Override
-		public MappedFieldType clone() {
-			return new PreanalyzedFieldType(this);
-		}
+        @Override
+        public PreanalyzedFieldType clone() {
+            return new PreanalyzedFieldType(this);
+        }
 
-		@Override
-		public String typeName() {
-			return CONTENT_TYPE;
-		}
-		
-		@Override
-		public Query existsQuery(QueryShardContext context) {
-			if (omitNorms()) {
-				return new TermQuery(new Term(FieldNamesFieldMapper.NAME, name()));
-			} else {
-				return new NormsFieldExistsQuery(name());
-			}
-		}
+        @Override
+        public void setName(String name) {
+            super.setName(name);
+            delegateType.setName(name);
+        }
 
-	}
+        @Override
+        public boolean equals(Object o) {
+            if (super.equals(o) == false) {
+                return false;
+            }
+            PreanalyzedFieldType that = (PreanalyzedFieldType) o;
+            return that.delegateType.equals(delegateType);
+        }
+
+        @Override
+        public int hashCode() {
+            return delegateType.hashCode();
+        }
+
+        public boolean fielddata() {
+            return delegateType.fielddata();
+        }
+
+        public void setFielddata(boolean fielddata) {
+            delegateType.setFielddata(fielddata);
+        }
+
+        public double fielddataMinFrequency() {
+            return delegateType.fielddataMinFrequency();
+        }
+
+        public void setFielddataMinFrequency(double fielddataMinFrequency) {
+          delegateType.setFielddataMinFrequency(fielddataMinFrequency);
+        }
+
+        public double fielddataMaxFrequency() {
+            return delegateType.fielddataMaxFrequency();
+        }
+
+        public void setFielddataMaxFrequency(double fielddataMaxFrequency) {
+            delegateType.setFielddataMaxFrequency(fielddataMaxFrequency());
+        }
+
+        public int fielddataMinSegmentSize() {
+            return delegateType.fielddataMinSegmentSize();
+        }
+
+        public void setFielddataMinSegmentSize(int fielddataMinSegmentSize) {
+            delegateType.setFielddataMinSegmentSize(fielddataMinSegmentSize);
+        }
+
+        @Override
+        public String typeName() {
+            return CONTENT_TYPE;
+        }
+
+        @Override
+        public Query prefixQuery(String value, MultiTermQuery.RewriteMethod method, QueryShardContext context) {
+            return delegateType.prefixQuery(value, method, context);
+        }
+
+        @Override
+        public SpanQuery spanPrefixQuery(String value, SpanMultiTermQueryWrapper.SpanRewriteMethod method, QueryShardContext context) {
+            return delegateType.spanPrefixQuery(value, method, context);
+        }
+
+        @Override
+        public Query existsQuery(QueryShardContext context) {
+            return delegateType.existsQuery(context);
+        }
+
+        @Override
+        public IntervalsSource intervals(String text, int maxGaps, boolean ordered, NamedAnalyzer analyzer) throws IOException {
+            return delegateType.intervals(text, maxGaps, ordered, analyzer);
+        }
+
+        @Override
+        public Query phraseQuery(TokenStream stream, int slop, boolean enablePosIncrements) throws IOException {
+            return delegateType.phraseQuery(stream, slop, enablePosIncrements);
+        }
+
+        @Override
+        public Query multiPhraseQuery(TokenStream stream, int slop, boolean enablePositionIncrements) throws IOException {
+            return delegateType.multiPhraseQuery(stream, slop, enablePositionIncrements);
+        }
+
+        @Override
+        public Query phrasePrefixQuery(TokenStream stream, int slop, int maxExpansions) throws IOException {
+            return delegateType.phrasePrefixQuery(stream, slop, maxExpansions);
+        }
+
+        @Override
+        public IndexFieldData.Builder fielddataBuilder(String fullyQualifiedIndexName) {
+            return delegateType.fielddataBuilder(fullyQualifiedIndexName);
+        }
+
+        @Override
+        public void checkCompatibility(MappedFieldType other, List<String> conflicts) {
+            delegateType.checkCompatibility(other, conflicts);
+        }
+    }
+
 
 	/**
 	 * Besides the default field type provided by the Builder, this field type
@@ -261,7 +348,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 	 * specified by the Solr JSON PreAnalyzed field type. The format
 	 * specification can be found at the link below.
 	 * 
-	 * @param xContentParser
+	 * @param parser The parser for the input document to be indexed.
 	 * @return A tuple, containing the plain text value and a TokenStream with
 	 *         the pre-analyzed tokens.
 	 * @see <a href="http://wiki.apache.org/solr/JsonPreAnalyzedParser">http://
