@@ -1,0 +1,26 @@
+{
+  "document": {
+    "properties": {
+      "sentence": {
+        "properties": {
+          "text": {
+            "analyzer": "keyword",
+            "store": true,
+            "term_vector": "with_positions_offsets",
+            "type": "preanalyzed"
+          }
+        }
+      },
+      "paragraph": {
+        "properties": {
+          "text": {
+            "analyzer": "keyword",
+            "store": true,
+            "term_vector": "with_positions_offsets",
+            "type": "preanalyzed"
+          }
+        }
+      }
+    }
+  }
+}

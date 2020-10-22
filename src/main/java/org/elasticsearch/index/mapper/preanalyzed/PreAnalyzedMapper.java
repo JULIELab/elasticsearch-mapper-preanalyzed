@@ -102,7 +102,6 @@ public class PreAnalyzedMapper extends FieldMapper {
 			// switch off storage off the field completely.
 			MappedFieldType fieldTypeIndexed = fieldType.clone();
 			fieldTypeIndexed.setStored(false);
-
 			return new PreAnalyzedMapper(name, fieldType, defaultFieldType, context.indexSettings(),
 					multiFieldsBuilder.build(this, context), copyTo, fieldTypeText, fieldTypeIndexed);
 		}
@@ -152,9 +151,9 @@ public class PreAnalyzedMapper extends FieldMapper {
             this.delegateType = delegateType;
         }
 
-        public PreanalyzedFieldType(PreanalyzedFieldType preanalyzedFieldType) {
-            super(preanalyzedFieldType);
-            this.delegateType = preanalyzedFieldType.delegateType;
+        public PreanalyzedFieldType(PreanalyzedFieldType ref) {
+            super(ref);
+			this.delegateType = ref.delegateType.clone();
         }
 
         @Override
@@ -241,7 +240,8 @@ public class PreAnalyzedMapper extends FieldMapper {
 
         @Override
         public Query phraseQuery(TokenStream stream, int slop, boolean enablePosIncrements) throws IOException {
-            return delegateType.phraseQuery(stream, slop, enablePosIncrements);
+			Query query = delegateType.phraseQuery(stream, slop, enablePosIncrements);
+			return query;
         }
 
         @Override
