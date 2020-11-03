@@ -18,22 +18,9 @@
  */
 package org.elasticsearch.index.mapper.preanalyzed;
 
-import static org.elasticsearch.client.Requests.putMappingRequest;
-import static org.elasticsearch.index.query.QueryBuilders.matchPhraseQuery;
-import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
-import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery;
-import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-
 import org.apache.commons.io.IOUtils;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
-import org.elasticsearch.action.search.SearchAction;
-import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.xcontent.XContentHelper;
@@ -42,9 +29,14 @@ import org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.ESIntegTestCase;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+
+import static org.elasticsearch.client.Requests.putMappingRequest;
+import static org.elasticsearch.index.query.QueryBuilders.*;
+import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertAcked;
 
 public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 
@@ -77,8 +69,8 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 
         assertAcked(client().admin().indices().prepareCreate("test").addMapping("document", mapping, XContentType.JSON));
 
-        // Put the preanalyzed mapping check that it is there indeed
-        client().admin().indices().putMapping(putMappingRequest("test").type("document").source(mapping, XContentType.JSON)).actionGet();
+        // Check that the mapping has been added correctly
+//        client().admin().indices().putMapping(putMappingRequest("test").type("document").source(mapping, XContentType.JSON)).actionGet();
         GetMappingsResponse actionGet =
                 client().admin().indices().getMappings(new GetMappingsRequest().indices("test")).get();
         Map<String, Object> mappingProperties =

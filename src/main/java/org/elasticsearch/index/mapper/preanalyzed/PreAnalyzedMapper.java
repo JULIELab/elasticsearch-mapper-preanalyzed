@@ -38,6 +38,7 @@ import org.elasticsearch.index.fielddata.IndexFieldData;
 import org.elasticsearch.index.mapper.*;
 import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.index.similarity.SimilarityProvider;
+import org.elasticsearch.index.similarity.SimilarityService;
 
 import java.io.IOException;
 import java.util.*;
@@ -51,7 +52,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 		public static final FieldType FIELD_TYPE = new FieldType();
 
 		static {
-			FIELD_TYPE.setTokenized(false);
+			FIELD_TYPE.setTokenized(true);
 			FIELD_TYPE.setStored(false);
 			FIELD_TYPE.setStoreTermVectors(false);
 			FIELD_TYPE.setOmitNorms(false);
@@ -132,7 +133,10 @@ public class PreAnalyzedMapper extends FieldMapper {
 				templateFt.setFielddataMinSegmentSize(fielddataMinSegSize);
 			}
 
-			return new PreanalyzedFieldType(templateFt);
+			PreanalyzedFieldType preanalyzedFieldType = new PreanalyzedFieldType(templateFt);
+			preanalyzedFieldType.setIndexAnalyzer(indexAnalyzer);
+			preanalyzedFieldType.setEagerGlobalOrdinals(eagerGlobalOrdinals);
+			return preanalyzedFieldType;
 		}
 
 	}
@@ -312,7 +316,52 @@ public class PreAnalyzedMapper extends FieldMapper {
 	@Override
 	protected void doXContentBody(XContentBuilder builder, boolean includeDefaults, Params params) throws IOException {
 		super.doXContentBody(builder, includeDefaults, params);
+		if (fieldType.indexOptions() != IndexOptions.NONE
+				&& (includeDefaults || fieldType.indexOptions() != TextFieldMapper.Defaults.FIELD_TYPE.indexOptions())) {
+			builder.field("index_options", indexOptionToString(fieldType.indexOptions()));
+		}
+		if (includeDefaults || fieldType.storeTermVectors() != TextFieldMapper.Defaults.FIELD_TYPE.storeTermVectors()) {
+			builder.field("term_vector", termVectorOptionsToString(fieldType));
+		}
+		if (includeDefaults || fieldType.omitNorms()) {
+			builder.field("norms", fieldType.omitNorms() == false);
+		}
 		doXContentAnalyzers(builder, includeDefaults);
+		if (fieldType().getTextSearchInfo().getSimilarity() != null) {
+			builder.field("similarity", fieldType().getTextSearchInfo().getSimilarity().name());
+		} else if (includeDefaults) {
+			builder.field("similarity", SimilarityService.DEFAULT_SIMILARITY);
+		}
+		if (includeDefaults || fieldType().eagerGlobalOrdinals()) {
+			builder.field("eager_global_ordinals", fieldType().eagerGlobalOrdinals());
+		}
+
+		if (includeDefaults || fieldType().fielddata() != false) {
+			builder.field("fielddata", fieldType().fielddata());
+		}
+		if (fieldType().fielddata()) {
+			if (includeDefaults
+					|| fieldType().fielddataMinFrequency() != TextFieldMapper.Defaults.FIELDDATA_MIN_FREQUENCY
+					|| fieldType().fielddataMaxFrequency() != TextFieldMapper.Defaults.FIELDDATA_MAX_FREQUENCY
+					|| fieldType().fielddataMinSegmentSize() != TextFieldMapper.Defaults.FIELDDATA_MIN_SEGMENT_SIZE) {
+				builder.startObject("fielddata_frequency_filter");
+				if (includeDefaults || fieldType().fielddataMinFrequency() != TextFieldMapper.Defaults.FIELDDATA_MIN_FREQUENCY) {
+					builder.field("min", fieldType().fielddataMinFrequency());
+				}
+				if (includeDefaults || fieldType().fielddataMaxFrequency() != TextFieldMapper.Defaults.FIELDDATA_MAX_FREQUENCY) {
+					builder.field("max", fieldType().fielddataMaxFrequency());
+				}
+				if (includeDefaults || fieldType().fielddataMinSegmentSize() != TextFieldMapper.Defaults.FIELDDATA_MIN_SEGMENT_SIZE) {
+					builder.field("min_segment_size", fieldType().fielddataMinSegmentSize());
+				}
+				builder.endObject();
+			}
+		}
+	}
+
+	@Override
+	public PreanalyzedFieldType fieldType() {
+		return (PreanalyzedFieldType) super.fieldType();
 	}
 
 	/**
@@ -565,7 +614,7 @@ public class PreAnalyzedMapper extends FieldMapper {
 			// the same name.
 			// This will give us a stored and analyzed field in the index
 			// eventually.
-			if (fieldTypeIndexed.indexOptions() != IndexOptions.NONE) {
+			if (fieldTypeIndexed.indexOptions() != IndexOptions.NONE && fieldTypeIndexed.tokenized()) {
 				TokenStream ts = valueAndTokenStream.v2();
 
 				if (ts != null) {
