@@ -16,23 +16,19 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.index.mapper.preanalyzed;
+package org.elasticsearch.index.mapper;
 
 import org.apache.commons.io.IOUtils;
-import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
-import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.xcontent.XContentHelper;
-import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.ESIntegTestCase;
+import org.elasticsearch.xcontent.XContentType;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Map;
 
 import static org.elasticsearch.client.Requests.putMappingRequest;
 import static org.elasticsearch.index.query.QueryBuilders.*;
@@ -42,7 +38,7 @@ public class ObjectFieldIntergrationTests extends ESIntegTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        return Collections.singleton(MapperPreAnalyzedPlugin.class);
+        return Collections.singleton(MapperPreanalyzedPlugin.class);
     }
 
 

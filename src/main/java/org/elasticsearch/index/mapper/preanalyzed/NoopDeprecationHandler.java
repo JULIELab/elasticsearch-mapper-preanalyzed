@@ -1,7 +1,8 @@
 package org.elasticsearch.index.mapper.preanalyzed;
 
-import org.elasticsearch.common.xcontent.DeprecationHandler;
-import org.elasticsearch.common.xcontent.XContentLocation;
+
+import org.elasticsearch.xcontent.DeprecationHandler;
+import org.elasticsearch.xcontent.XContentLocation;
 
 import java.util.function.Supplier;
 

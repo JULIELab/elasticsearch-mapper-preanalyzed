@@ -9,7 +9,8 @@
           		"copy_to":"title_copy"
             },
             "title_copy":{
-            	"type" : "preanalyzed"
+            	"type" : "preanalyzed",
+                "store": true
             },
             "author":{
             	"type":"text"

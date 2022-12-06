@@ -16,20 +16,19 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.index.plugin.mapper.preanalyzed;
+package org.elasticsearch.index.mapper;
+
+import org.elasticsearch.index.mapper.Mapper.TypeParser;
+import org.elasticsearch.plugins.MapperPlugin;
+import org.elasticsearch.plugins.Plugin;
 
 import java.util.Collections;
 import java.util.Map;
 
-import org.elasticsearch.index.mapper.Mapper.TypeParser;
-import org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper;
-import org.elasticsearch.plugins.MapperPlugin;
-import org.elasticsearch.plugins.Plugin;
-
-public class MapperPreAnalyzedPlugin extends Plugin implements MapperPlugin {
+public class MapperPreanalyzedPlugin extends Plugin implements MapperPlugin {
 
 	@Override
 	public Map<String, TypeParser> getMappers() {
-		return Collections.singletonMap("preanalyzed", new PreAnalyzedMapper.TypeParser());
+		return Collections.singletonMap(PreanalyzedFieldMapper.CONTENT_TYPE, PreanalyzedFieldMapper.PARSER);
 	}
 }

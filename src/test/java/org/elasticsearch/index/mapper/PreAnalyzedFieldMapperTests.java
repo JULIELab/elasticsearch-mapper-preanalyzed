@@ -16,70 +16,49 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.index.mapper.preanalyzed;
+package org.elasticsearch.index.mapper;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.*;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.IndexableFieldType;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.bytes.BytesArray;
-import org.elasticsearch.common.compress.CompressedXContent;
-import org.elasticsearch.common.xcontent.NamedXContentRegistry;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.IndexService;
-import org.elasticsearch.index.mapper.*;
-import org.elasticsearch.index.mapper.ParseContext.Document;
-import org.elasticsearch.index.mapper.preanalyzed.PreAnalyzedMapper.PreAnalyzedTokenStream;
-import org.elasticsearch.indices.mapper.MapperRegistry;
-import org.elasticsearch.test.ESSingleNodeTestCase;
-import org.junit.Before;
+import org.elasticsearch.index.mapper.preanalyzed.NoopDeprecationHandler;
+import org.elasticsearch.index.mapper.preanalyzed.PreanalyzedTokenStream;
+import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.xcontent.NamedXContentRegistry;
+import org.elasticsearch.xcontent.XContentBuilder;
+import org.elasticsearch.xcontent.XContentParser;
+import org.elasticsearch.xcontent.XContentType;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Collection;
+import java.util.List;
 
-import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.elasticsearch.xcontent.XContentFactory.jsonBuilder;
 
-public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 
-	MapperRegistry mapperRegistry;
-	IndexService indexService;
-	DocumentMapperParser parser;
+public class PreAnalyzedFieldMapperTests extends MapperTestCase {
 
-	@Before
-	public void setup() {
-		indexService = createIndex("test");
-		Map<String, Mapper.TypeParser> typeParsers = new HashMap<>();
-		typeParsers.put(PreAnalyzedMapper.CONTENT_TYPE,
-						new PreAnalyzedMapper.TypeParser());
-		typeParsers.put("text", new TextFieldMapper.TypeParser());
-		java.util.function.Function<java.lang.String,java.util.function.Predicate<java.lang.String>> filter = (String a) -> {return (b)-> true;};
-		mapperRegistry = new MapperRegistry(typeParsers, Collections.<String, MetadataFieldMapper.TypeParser> emptyMap(), filter);
-		parser = new DocumentMapperParser(indexService.getIndexSettings(), indexService.mapperService(), indexService.xContentRegistry(), indexService.similarityService(), mapperRegistry, null);
+	@Override
+	protected Collection<? extends Plugin> getPlugins() {
+		return List.of(new MapperPreanalyzedPlugin());
 	}
 
 	public void testSimple() throws Exception {
-		String mapping = IOUtils.toString(getClass().getResourceAsStream("/simpleMapping.json"), "UTF-8");
-		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
-		DocumentMapper docMapper = parser.parse(null, new CompressedXContent(mapping));
-		Document doc = docMapper.parse(new SourceToParse("test", "document", "1", new BytesArray(docBytes), XContentType.JSON)).rootDoc();
+		MapperService mapperService = createMapperService(fieldMapping(b -> {
+			minimalMapping(b);
+			b.field("store", true);
+				b.field("term_vector", "with_positions_offsets");
+		}));
+		final DocumentMapper docMapper = mapperService.documentMapper();
+		ParsedDocument doc = docMapper.parse(source(b -> b.field("field", getSampleValueForDocument())));
 
-		// Check field: "author"
-		IndexableField field = doc.getField("author");
-		assertNotNull(field);
-		assertEquals("Anna Sewell", field.stringValue());
 
-		// Check field: "title"
-
-		IndexableField[] fields = doc.getFields("title");
+		IndexableField[] fields = doc.rootDoc().getFields("field");
 		// "title" is a preanalyzed field that is also stored (see mapping). We
 		// have to create two fields: one with the
 		// pre-analyzed token stream and one with the stored value.
@@ -101,47 +80,6 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 		assertFalse(fieldType.storeTermVectorPositions());
 		assertTrue(fieldType.stored());
 		assertEquals("Black Beauty ran past the bloody barn.", fields[1].stringValue());
-
-		// End field "title"
-
-		IndexableField yearField = doc.getField("year");
-		assertNotNull(yearField);
-		assertEquals(1877L, yearField.numericValue());
-	}
-	
-	public void testCopyField() throws Exception {
-		String mapping = IOUtils.toString(getClass().getResourceAsStream("/copyToMapping.json"), "UTF-8");
-		byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
-		DocumentMapper docMapper = parser.parse(null, new CompressedXContent(mapping));
-		Document doc = docMapper.parse(new SourceToParse("test", "document", "1", new BytesArray(docBytes), XContentType.JSON)).rootDoc();
-
-		// Check field: "author"
-		IndexableField field = doc.getField("author");
-		assertNotNull(field);
-		assertEquals("Anna Sewell", field.stringValue());
-		
-		// Check field: "title_copy"
-
-		IndexableField[] fields = doc.getFields("title_copy");
-		// "title" is a preanalyzed field that is also stored (see mapping). We
-		// have to create two fields: one with the
-		// pre-analyzed token stream and one with the stored value.
-		assertEquals(1, fields.length);
-		IndexableFieldType fieldType = fields[0].fieldType();
-		assertEquals(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS, fieldType.indexOptions());
-		assertTrue(fieldType.tokenized());
-		assertFalse(fieldType.storeTermVectorOffsets());
-		assertFalse(fieldType.storeTermVectorPositions());
-		assertFalse(fieldType.stored());
-		// check the token stream
-		TokenStream ts = fields[0].tokenStream(null, null);
-		parsedPreanalyzedTokensCorrect(ts);
-
-		// End field "title"
-
-		IndexableField yearField = doc.getField("year");
-		assertNotNull(yearField);
-		assertEquals(1877L, yearField.numericValue());
 	}
 
 	private void parsedPreanalyzedTokensCorrect(TokenStream ts) throws IOException {
@@ -246,7 +184,7 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 		// position the token stream expects.
 		parser.nextToken();
 
-		try (final PreAnalyzedTokenStream ts = new PreAnalyzedMapper.PreAnalyzedTokenStream(parser)) {
+		try (final PreanalyzedTokenStream ts = new PreanalyzedTokenStream(parser)) {
 
 			CharTermAttribute termAtt = ts.addAttribute(CharTermAttribute.class);
 			OffsetAttribute offsetAtt = ts.addAttribute(OffsetAttribute.class);
@@ -283,4 +221,49 @@ public class PreAnalyzedFieldMapperTests extends ESSingleNodeTestCase {
 			assertEquals("testtype", typeAtt.type());
 		}
 	}
+
+
+	@Override
+	protected void minimalMapping(XContentBuilder xContentBuilder) throws IOException {
+		xContentBuilder.field("type", PreanalyzedFieldMapper.CONTENT_TYPE);
+	}
+
+	@Override
+	protected Object getSampleValueForDocument() {
+		return "{\"v\":\"1\",\"str\":\"Black Beauty ran past the bloody barn.\",\"tokens\":[{\"t\":\"Black\",\"s\":0,\"e\":5,\"i\":1},{\"t\":\"hero\",\"s\":0,\"e\":12,\"i\":0},{\"t\":\"Beauty\",\"s\":6,\"e\":12,\"i\":1},{\"t\":\"ran\",\"s\":13,\"e\":16,\"i\":1},{\"t\":\"past\",\"s\":17,\"e\":21,\"i\":1},{\"t\":\"the\",\"s\":22,\"e\":25,\"i\":1},{\"t\":\"bloody\",\"s\":26,\"e\":32,\"i\":1},{\"t\":\"NP\",\"s\":26,\"e\":37,\"i\":0},{\"t\":\"NNP\",\"s\":26,\"e\":37,\"i\":0},{\"t\":\"barn\",\"s\":33,\"e\":37,\"i\":1},{\"t\":\".\",\"s\":37,\"e\":38,\"i\":1}]}";
+	}
+
+	@Override
+	protected void registerParameters(ParameterChecker checker) throws IOException {
+		// needed to avoid an error in testUpdates()
+		checker.registerUpdateCheck(b -> b.field("boost", 2.0), m -> assertEquals(m.fieldType().boost(), 2.0, 0));
+	}
+
+	@Override
+	protected Object generateRandomInputValue(MappedFieldType mappedFieldType) {
+		return null;
+	}
+
+	/**
+	 * This basically disables tests with multi-field values that would raise an IllegalArgumentException because
+	 * there is no fielddata.
+	 * @param b
+	 * @throws IOException
+	 */
+	@Override
+	protected void randomFetchTestFieldConfig(XContentBuilder b) throws IOException {
+		assumeFalse("We don't have a way to assert things here", true);
+	}
+
+	/**
+	 * This is required to affirm that the warning in the testMinimalToMaximal test is expected.
+	 * @return
+	 */
+	@Override
+	protected String[] getParseMaximalWarnings() {
+		return new String[] { "Parameter [boost] on field [field] is deprecated and will be removed in 8.0" };
+	}
+
+
+
 }

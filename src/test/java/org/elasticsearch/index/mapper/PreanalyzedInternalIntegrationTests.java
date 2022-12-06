@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.index.mapper.preanalyzed;
+package org.elasticsearch.index.mapper;
 
 import org.apache.commons.io.IOUtils;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
@@ -24,11 +24,11 @@ import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.xcontent.XContentHelper;
-import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.plugin.mapper.preanalyzed.MapperPreAnalyzedPlugin;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.test.ESIntegTestCase;
+import org.elasticsearch.xcontent.XContentType;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -42,7 +42,7 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
 
     @Override
     protected Collection<Class<? extends Plugin>> nodePlugins() {
-        return Collections.singleton(MapperPreAnalyzedPlugin.class);
+        return Collections.singleton(MapperPreanalyzedPlugin.class);
     }
 
     /**
@@ -70,7 +70,6 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
         assertAcked(client().admin().indices().prepareCreate("test").addMapping("document", mapping, XContentType.JSON));
 
         // Check that the mapping has been added correctly
-//        client().admin().indices().putMapping(putMappingRequest("test").type("document").source(mapping, XContentType.JSON)).actionGet();
         GetMappingsResponse actionGet =
                 client().admin().indices().getMappings(new GetMappingsRequest().indices("test")).get();
         Map<String, Object> mappingProperties =
@@ -129,5 +128,27 @@ public class PreanalyzedInternalIntegrationTests extends ESIntegTestCase {
         SearchHit searchHit = searchResponse.getHits().getHits()[0];
 
         assertTrue(((String) searchHit.field("title").getValue()).startsWith("Black Beauty"));
+    }
+
+    public void testCopyField() throws Exception {
+        String mapping = IOUtils.toString(getClass().getResourceAsStream("/copyToMapping.json"), "UTF-8");
+        byte[] docBytes = IOUtils.toByteArray(getClass().getResourceAsStream("/preanalyzedDoc.json"));
+
+        assertAcked(client().admin().indices().prepareCreate("test").addMapping("document", mapping, XContentType.JSON));
+
+        // Index the test document
+        index("test", "document", "1", XContentHelper.convertToJson(new BytesArray(docBytes), false, false, XContentType.JSON));
+        refresh();
+
+        // make sure we retrieve the document when searching on the copy field
+        SearchResponse searchResponse = client().prepareSearch("test")
+                // we use a termQuery because in the mapping, the title_copy field does not specify an analyzer. The standard analyzer would lowercase the "Black". But
+                // we added the preanalyzed terms without any filter, so "Black" is in capital case. A queryStringQuery would fail here.
+                .setQuery(QueryBuilders.termQuery("title_copy", "Black")).setSize(1).storedFields("title", "title_copy").setIndices("test").execute()
+                .get();
+        assertEquals(1l, searchResponse.getHits().getTotalHits().value);
+        final SearchHit hit = searchResponse.getHits().getHits()[0];
+        System.out.println(hit.field("title_copy"));
+
     }
 }
