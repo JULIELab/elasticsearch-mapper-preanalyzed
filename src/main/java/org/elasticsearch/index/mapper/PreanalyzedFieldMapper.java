@@ -1237,31 +1237,38 @@ public class PreanalyzedFieldMapper extends FieldMapper {
         return spanQuery.build();
     }
 
-    @Override
-    protected void doXContentBody(XContentBuilder builder, Params params) throws IOException {
-        // this is a pain, but we have to do this to maintain BWC
-        boolean includeDefaults = params.paramAsBoolean("include_defaults", false);
-        builder.field("type", contentType());
+    // this method - taken from TextFieldMapper - causes IllegalAccessExceptions when run in an ES server.
+    // Reason: expressions like b.boost.toXContent() access the toXContent() method that is protected in
+    // FieldMapper#Parameter(); since this plugin has its own JAR file, it will be loaded by another
+    // ClassLoader than the FieldMapper core class. This prohibits access to protected fields.
+    // What negative consequences the not-overriding of this method has, I do not really know.
+    // I don't know when a mapping is converted using this method and for what purpose.
+//    @Override
+//    protected void doXContentBody(XContentBuilder builder, Params params) throws IOException {
+//        // this is a pain, but we have to do this to maintain BWC
+//        boolean includeDefaults = params.paramAsBoolean("include_defaults", false);
+//        builder.field("type", contentType());
+//
+//        final Builder b = (Builder) getMergeBuilder();
+//        b.boost.toXContent(builder, includeDefaults);
+//        b.index.toXContent(builder, includeDefaults);
+//        b.store.toXContent(builder, includeDefaults);
+//        this.multiFields.toXContent(builder, params);
+//        this.copyTo.toXContent(builder, params);
+//        b.meta.toXContent(builder, includeDefaults);
+//        b.indexOptions.toXContent(builder, includeDefaults);
+//        b.termVectors.toXContent(builder, includeDefaults);
+//        b.norms.toXContent(builder, includeDefaults);
+//        b.analyzers.indexAnalyzer.toXContent(builder, includeDefaults);
+//        b.analyzers.searchAnalyzer.toXContent(builder, includeDefaults);
+//        b.analyzers.searchQuoteAnalyzer.toXContent(builder, includeDefaults);
+//        b.similarity.toXContent(builder, includeDefaults);
+//        b.eagerGlobalOrdinals.toXContent(builder, includeDefaults);
+//        b.analyzers.positionIncrementGap.toXContent(builder, includeDefaults);
+//        b.fieldData.toXContent(builder, includeDefaults);
+//        b.freqFilter.toXContent(builder, includeDefaults);
+//        b.indexPrefixes.toXContent(builder, includeDefaults);
+//        b.indexPhrases.toXContent(builder, includeDefaults);
+//    }
 
-        final Builder b = (Builder) getMergeBuilder();
-        b.boost.toXContent(builder, includeDefaults);
-        b.index.toXContent(builder, includeDefaults);
-        b.store.toXContent(builder, includeDefaults);
-        this.multiFields.toXContent(builder, params);
-        this.copyTo.toXContent(builder, params);
-        b.meta.toXContent(builder, includeDefaults);
-        b.indexOptions.toXContent(builder, includeDefaults);
-        b.termVectors.toXContent(builder, includeDefaults);
-        b.norms.toXContent(builder, includeDefaults);
-        b.analyzers.indexAnalyzer.toXContent(builder, includeDefaults);
-        b.analyzers.searchAnalyzer.toXContent(builder, includeDefaults);
-        b.analyzers.searchQuoteAnalyzer.toXContent(builder, includeDefaults);
-        b.similarity.toXContent(builder, includeDefaults);
-        b.eagerGlobalOrdinals.toXContent(builder, includeDefaults);
-        b.analyzers.positionIncrementGap.toXContent(builder, includeDefaults);
-        b.fieldData.toXContent(builder, includeDefaults);
-        b.freqFilter.toXContent(builder, includeDefaults);
-        b.indexPrefixes.toXContent(builder, includeDefaults);
-        b.indexPhrases.toXContent(builder, includeDefaults);
-    }
 }
