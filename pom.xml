@@ -4,7 +4,7 @@
     <groupId>de.julielab</groupId>
     <artifactId>elasticsearch-mapper-preanalyzed</artifactId>
     <name>Plugin: Mapper: Preanalyzed</name>
-    <version>7.17.7</version>
+    <version>7.17.8</version>
     <properties>
         <elasticsearch.plugin.classname>org.elasticsearch.index.mapper.MapperPreanalyzedPlugin
         </elasticsearch.plugin.classname>
